@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+{
+    'name': 'Company ERP customization',
+    'version': '17.0',
+    'author': 'Maach Services',
+    'description': """This module is used to auto configure odoo modules, setups and modules required for companies""",
+    'summary': 'ERP Configuration application for Companies',
+    'category': 'Base',
+    'depends': [
+        'base', 
+        'account',
+        'ik_multi_branch', 
+        'account_accountant', 
+        'purchase', 
+        'mail', 
+        'contacts', 
+        'auditlog',
+        'auth_session_timeout',
+        'maach_payment_schedule',
+        'account_asset',
+        'website_helpdesk',
+        'attachment_indexation',
+        'account_reports',
+        'account_followup',
+        'account_debit_note',
+        'account_check_printing',
+        'account_budget',
+        'account_batch_payment',
+        'red_addons',
+
+        ],
+    'data': [
+        'security/security_group.xml', 
+        # 'security/ir.model.access.csv',
+        'data/base_config.xml',
+    ],
+    'assets': {'web.assets_backend': [
+        # '/company_memo/static/src/js/hide_function.js',
+    ]},
+    # 'qweb': [
+    #     'static/src/xml/base.xml',
+    # ],
+    'price': 1305.00,
+    'sequence': 1,
+    'currency': 'EUR',
+    'installable': True,
+    'auto_install': False,
+}
