@@ -7,21 +7,7 @@
 			<field name="arch" type="xml">
 				<form string="Recruitment Request">
 					<header>
-						<!-- <button name="action_confirm" states="draft"
-							string="Submit to Manager" type="object" class="oe_highlight"
-							groups="to_hr_recruitment_request.group_user" />
-						<button name="action_accept" states="confirmed"
-							string="Approve" type="object" class="oe_highlight"
-							groups="hr_recruitment.group_hr_recruitment_manager" />
-						<button name="action_refuse" states="confirmed,accepted"
-							string="Refuse" type="object"
-							groups="hr_recruitment.group_hr_recruitment_manager" />
-						<button name="action_draft" states="confirmed,refused"
-							string="Set to Draft" type="object" />
-						
-						<button name="action_done" states="recruiting"
-							string="Set to Done" type="object"
-							/> -->
+						 
 						<button name="action_start_recruit" states="confirmed"
 							string="Start Recruitment" type="object" class="oe_highlight"
 							/>
