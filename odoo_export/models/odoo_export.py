@@ -223,9 +223,9 @@ class MaOdooExportLine(models.Model):
     target_model = fields.Many2one('ir.model', string="Target Model")
     field_id = fields.Many2one('ir.model.fields', string="Field")
     name = fields.Char(string="Header Name", store=True, readonly=False, help="Display name of field")
-    technical_name = fields.Char(string="Technical Name", store=True, readonly=True, compute="_compute_field_id", help="technical name of field")
+    technical_name = fields.Char(string="Technical Name", readonly=True, compute="_compute_field_id", help="technical name of field")
     field_model = fields.Many2one('ir.model', string="Field Model", compute="_compute_field_id")
-    field_type = fields.Char(string="Field Type", store=True, readonly=True, compute="_compute_field_id")
+    field_type = fields.Char(string="Field Type", readonly=True, compute="_compute_field_id")
     related_field_chain = fields.Char(string="field Chain")
     date_format = fields.Char(string="Date format")
     field_domain = fields.Char(string="Python Logic", 
