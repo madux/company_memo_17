@@ -2027,32 +2027,33 @@ class Memo_Model(models.Model):
         return vals
 
     def generate_loan_entries(self):
-        if self.loan_reference:
-            raise ValidationError("You have generated a loan already for this record")
-        view_id = self.env.ref('account_loan.account_loan_form')
-        if (self.memo_type.memo_key != "loan") or (self.loan_amount < 1):
-            raise ValidationError("Check validation: \n (1) Memo type must be 'loan request'\n (2) Loan Amount must be greater than one to proceed with loan request")
-        ret = {
-            'name':'Generate loan request',
-            'view_mode': 'form',
-            'view_id': view_id.id,
-            'view_type': 'form',
-            'res_model': 'account.loan',
-            'type': 'ir.actions.act_window',
-            'domain': [],
-            'context': {
-                    'default_loan_type': self.loan_type,
-                    'default_loan_amount': self.loan_amount,
-                    'default_periods':self.periods or 12,  
-                    'default_partner_id':self.employee_id.user_id.partner_id.id,  
-                    'default_method_period':self.method_period,  
-                    'default_rate': 15, 
-                    'default_start_date':self.start_date, 
-                    'default_name': self.code,
-            },
-            'target': 'current'
-            }
-        return ret
+        pass
+        # if self.loan_reference:
+        #     raise ValidationError("You have generated a loan already for this record")
+        # view_id = self.env.ref('account_loan.account_loan_form')
+        # if (self.memo_type.memo_key != "loan") or (self.loan_amount < 1):
+        #     raise ValidationError("Check validation: \n (1) Memo type must be 'loan request'\n (2) Loan Amount must be greater than one to proceed with loan request")
+        # ret = {
+        #     'name':'Generate loan request',
+        #     'view_mode': 'form',
+        #     'view_id': view_id.id,
+        #     'view_type': 'form',
+        #     'res_model': 'account.loan',
+        #     'type': 'ir.actions.act_window',
+        #     'domain': [],
+        #     'context': {
+        #             'default_loan_type': self.loan_type,
+        #             'default_loan_amount': self.loan_amount,
+        #             'default_periods':self.periods or 12,  
+        #             'default_partner_id':self.employee_id.user_id.partner_id.id,  
+        #             'default_method_period':self.method_period,  
+        #             'default_rate': 15, 
+        #             'default_start_date':self.start_date, 
+        #             'default_name': self.code,
+        #     },
+        #     'target': 'current'
+        #     }
+        # return ret
 
     def migrate_records(self):
         account_ref = self.env['account.payment'].search([])
