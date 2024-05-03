@@ -10,15 +10,15 @@
                         <group>
                             <field name="stage_id" required="1"/>
                             <field name="stage_type" required="0"/>
-                            <field name="interview_date" attrs="{'invisible': [('stage_type', '!=', 'is_interview_stage')], 'required': [('stage_type', '=', 'is_interview_stages')]}"/>
+                            <field name="interview_date" invisible="stage_type != 'is_interview_stage'" required="stage_type== 'is_interview_stages'"/>
                         </group>
                         <group>
                             <field name="send_mail"/>
                             <field name="email_invite_template" invisible="0" required="0" 
-                            attrs="{'invisible': [('send_mail', '=', False)], 'reuired': [('send_mail', '=', True)]}"
+                            invisible="send_mail == False" required="send_mail== True"
                             domain="[('model', '=', 'hr.applicant.move.wizard')]"/>
                             <field name="send_mail_unprogressed" />
-                            <field name="email_template_unprogressed" attrs="{'invisible': [('send_mail_unprogressed', '=', False)]}" />
+                            <field name="email_template_unprogressed" invisible="send_mail_unprogressed', '=', False)]}" />
 
                         </group>
                         <notebook>

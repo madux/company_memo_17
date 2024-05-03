@@ -15,7 +15,7 @@
                         widget="many2many_tags"
                         force_save="1"/> 
                 </group>
-                <group attrs="{'invisible': [('sign_template_ids', '=', [])]}" string="Sign Request Options">
+                <group invisible="sign_template_ids== []" string="Sign Request Options">
                     <field name="applicant_role_id" options="{'no_create': True}"/>
                     <!-- <field name="responsible_id" options="{'no_create_edit': True}"/> -->
                 </group>

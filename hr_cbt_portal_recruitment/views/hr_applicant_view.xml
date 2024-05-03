@@ -7,7 +7,7 @@
             <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_form"/>
             <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
-                <button name="action_audit_certify" string="Audit Certify" class="oe_highlight" type="object" attrs="{'invisible': [('stage_type', '!=', 'audit')]}"/>
+                <button name="action_audit_certify" string="Audit Certify" class="oe_highlight" type="object" invisible="stage_type != 'audit'"/>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="after">
                 <field name="audited" invisible="1" />
@@ -19,7 +19,7 @@
             </xpath>
             <xpath expr="//div[@name='button_box']" position="after">
                 <!-- Ribbon for successful audit -->
-                <widget name="web_ribbon" title="Audit Successful" bg_color="bg-success" attrs="{'invisible': [('audited', '=', False)]}"/>
+                <widget name="web_ribbon" title="Audit Successful" bg_color="bg-success" invisible="audited == False"/>
             </xpath> 
             
             <field name="email_from" position="before">
@@ -40,15 +40,15 @@
                                 <field name="has_completed_nysc"/>
                                 <field name="know_anyone_at_eedc"/>
                                 <field name="linkedin_account"/>
-                                <field name="specify_personal_personality" attrs="{'invisible':[('know_anyone_at_eedc', '!=', 'Yes')]}"/>
+                                <field name="specify_personal_personality" invisible="know_anyone_at_eedc != 'Yes'"/>
                                 <field name="relationship_type"/>
                                 <field name="degree_in_relevant_field"/>
-                                <field name="specifylevel_qualification" attrs="{'invisible':[('degree_in_relevant_field', '!=', 'Yes')]}"/>
+                                <field name="specifylevel_qualification" invisible="degree_in_relevant_field != 'Yes'"/>
                             </group>
                             <group>
                                 <field name="reside_job_location"/>
                                 <field name="presentlocation"/>
-                                <field name="relocation_plans" attrs="{'invisible':[('reside_job_location', '!=', 'No')]}"/>
+                                <field name="relocation_plans" invisible="reside_job_location != 'No'"/>
                                 <field name="resumption_period"/>
                                 <field name="knowledge_description"/>
                                 <field name="professional_certificate_link"/>

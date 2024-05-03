@@ -10,7 +10,7 @@
                     <button string="Create employee:"
                             type="object" name="action_create_employee"
                             confirm="Are you sure you want to create as employee?"
-                            attrs="{'invisible': ['|', ('id', '=', False),('employee_id', '!=', False)]}"/>
+                            invisible="id == False or employee_id != False"/>
                             <!-- share is not correctly recomputed because it depends on fields of reified view => invisible before saving (id=False) -->
                 </xpath>
             </field>

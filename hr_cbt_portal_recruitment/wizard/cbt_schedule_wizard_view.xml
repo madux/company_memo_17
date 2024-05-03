@@ -47,7 +47,7 @@
                     <footer>
                         <button type="object" name="schedule_action"
                             string="Confirm Schedule" class="oe_highlight"
-                            attrs="{'invisible': [('applicant_ids','=', False)]}" />
+                            invisible="applicant_ids == False" />
                         <button special="cancel" string="Cancel"/>
                     </footer>
                 </form>

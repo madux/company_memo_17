@@ -9,11 +9,11 @@
                 <xpath expr="//group[@name='group_standard_price']" position="after">
                     <group name="group_general">
                         <field name="is_vehicle_product" invisible="0"/>
-                        <field name="vehicle_plate_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                        <field name="vehicle_reg_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)]}"/>
-                        <field name="vehicle_color" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                        <field name="vehicle_make" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                        <field name="vehicle_model" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
+                        <field name="vehicle_plate_number" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                        <field name="vehicle_reg_number" invisible="0" invisible=is_vehicle_product', '=', False)]}"/>
+                        <field name="vehicle_color" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                        <field name="vehicle_make" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                        <field name="vehicle_model" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
                     </group>
                 </xpath>
             </field>
@@ -28,13 +28,13 @@
                         <group>
                             <group name="group_general">
                                 <field name="is_vehicle_product" invisible="0"/>
-                                <field name="vehicle_plate_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                <field name="vehicle_reg_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)]}"/>
+                                <field name="vehicle_plate_number" invisible="is_vehicle_product==False" required="is_vehicle_product==True"/>
+                                <field name="vehicle_reg_number" invisible="is_vehicle_product ==False"/>
                             </group>
                             <group name="group_general">
-                                <field name="vehicle_color" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                <field name="vehicle_make" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                <field name="vehicle_model" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
+                                <field name="vehicle_color" invisible="is_vehicle_product==False" required="is_vehicle_product== True"/>
+                                <field name="vehicle_make" invisible="is_vehicle_product == False" required="is_vehicle_product== True"/>
+                                <field name="vehicle_model" invisible="is_vehicle_product== False" required="is_vehicle_product==True"/>
                             </group>
                         </group>
                     </page>
@@ -68,13 +68,13 @@
 							<page name="vehicle" string="Vehicle Setting">
                                 <group>
                                     <group name="group_general">
-                                        <field name="vehicle_plate_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                        <field name="vehicle_reg_number" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)]}"/>
+                                        <field name="vehicle_plate_number" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                                        <field name="vehicle_reg_number" invisible="0" invisible=is_vehicle_product', '=', False)]}"/>
                                     </group>
                                     <group name="group_general">
-                                        <field name="vehicle_color" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                        <field name="vehicle_make" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
-                                        <field name="vehicle_model" invisible="0" attrs="{'invisible': [('is_vehicle_product', '=', False)], 'required': [('is_vehicle_product', '=', True)]}"/>
+                                        <field name="vehicle_color" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                                        <field name="vehicle_make" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
+                                        <field name="vehicle_model" invisible="0" invisible=is_vehicle_product', '=', False)], 'required=is_vehicle_product', '=', True)]}"/>
                                     </group>
                             </group>
                             </page>

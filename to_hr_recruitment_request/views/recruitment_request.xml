@@ -42,7 +42,8 @@
 								<field name="department_id" />
 								<field name="job_id" />
 								<field name="job_tmp"
-									attrs="{'invisible':[('job_id', '!=', False)], 'required':[('job_id', '=', False)]}" />
+									invisible="job_id != False" 
+									required="job_id== False" />
 								<field name="employees_count" />
 							</group>
 							<group>
