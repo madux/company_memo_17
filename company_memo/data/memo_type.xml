@@ -14,16 +14,26 @@
         <record id="mtype_agency_request" model="memo.type">
             <field name="name">AGENCY</field>
             <field name="memo_key">agency_process</field>
-            <field name="active">1</field>
+            <field name="active">0</field>
         </record>
 
         <record id="mtype_agency_port_inward_port_agent_request" model="memo.type">
-            <field name="name">PORT CALL INWARD CLEARANCE (Port Agent)</field>
+            <field name="name">PORT CALL INWARD &amp; OUTWARD CLEARANCE (Port Agent - VESSEL CLEARANCE)</field>
+            <field name="memo_key">agency_process</field>
+            <field name="active">1</field>
+        </record>
+        <record id="mtype_agency_port_inward_port_agent_tanker_req" model="memo.type">
+            <field name="name">PORT CALL INWARD &amp; OUTWARD CLEARANCE (Port Agent - TANKER CLEARANCE)</field>
             <field name="memo_key">agency_process</field>
             <field name="active">1</field>
         </record>
         <record id="mtype_agency_port_inward_protecting_agent_request" model="memo.type">
-            <field name="name">PORT CALL INWARD CLEARANCE (Protecting Agent)</field>
+            <field name="name">PORT CALL INWARD  &amp; OUTWARD (Protecting Agent - VESSEL CLEARANCE)</field>
+            <field name="memo_key">agency_process</field>
+            <field name="active">1</field>
+        </record> 
+         <record id="mtype_agency_port_inward_protecting_agent_tanker_request" model="memo.type">
+            <field name="name">PORT CALL INWARD  &amp; OUTWARD (Protecting Agent - TANKER CLEARANCE)</field>
             <field name="memo_key">agency_process</field>
             <field name="active">1</field>
         </record> 
