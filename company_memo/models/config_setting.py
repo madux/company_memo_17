@@ -136,8 +136,8 @@ class MemoStageInvoiceLine(models.Model):
         )
     move_type = fields.Selection(
         [
-        ("customer", "Customer payment"),
-        ("vendor", "Vendor Payment"),
+        ("customer", "Customer Invoice"),
+        ("vendor", "Vendor Bills"),
         ],
         string="Invoice type",
         required=True,

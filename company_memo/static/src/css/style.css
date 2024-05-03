@@ -1,0 +1,29 @@
+.process-flow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .process {
+    text-align: center;
+    flex-grow: 1;
+    position: relative;
+  }
+  .process .icon {
+    font-size: 36px;
+    margin-bottom: 10px;
+  }
+  .process .title {
+    font-weight: bold;
+  }
+  .process .arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 200px;
+    background-color: #060202;
+    z-index: -1;
+  }
+  .process:last-child .arrow {
+    display: none; /* Hide arrow for last process */
+  }

@@ -367,6 +367,26 @@ class Memo_Model(models.Model):
         store=True,
         )
     
+    final_stage_id = fields.Char('final stage', compute="get_final_stage")
+    first_stage = fields.Char('first stage', compute="get_first_stage")
+
+    @api.depends("memo_setting_id")
+    def get_first_stage(self):
+        for record in self:
+            if record.memo_setting_id and record.memo_setting_id.stage_ids:
+                first_stage = record.memo_setting_id.stage_ids[0]
+                record.first_stage = first_stage.name
+            else:
+                record.first_stage = False
+
+    @api.depends("memo_setting_id")
+    def get_final_stage(self):
+        for record in self:
+            if record.memo_setting_id and record.memo_setting_id.stage_ids:
+                record.final_stage_id = record.memo_setting_id.stage_ids[-1].name
+            else:
+                record.final_stage_id = False
+
     dashboard_memo_ids = fields.Many2many(
         'memo.model', 
         'memo_model_dashboard_rel',

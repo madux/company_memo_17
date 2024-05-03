@@ -39,7 +39,96 @@
                                 <div class="g-sidenav-show  bg-gray-100" id="dashboard-content">
                                     <div class="dashboard-main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
                                         <div class="container-fluid py-4">
-                                            <div class="row">
+                                                <div class="process-flow" >
+                                                    <div class="process">
+                                                        <div class="icon"><i class="fa fa-hourglass-start"/></div>
+                                                        <div class="title">
+                                                            <field name="first_stage"/>
+                                                            <p class="o_default_snippet_text">This is the initiate<br/>process of this project.</p>
+                                                        </div>
+                                                        <div class="arrow">-------------------------------</div>
+                                                    </div>
+                                                    <div class="process" invisible="is_request_completed == True">
+                                                        <div class="icon"><i class="fa fa-unlock-alt"/></div>
+                                                        <div class="title">
+                                                            <field name="stage_id" readonly="1" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/>
+                                                             <p class="o_default_snippet_text">This is the current stage. <br/>The responsible user forwards this to next stage</p>
+                                                        </div>
+                                                        <div class="arrow">-------------------------------</div>
+                                                    </div>
+                                                    <div class="process" invisible="is_request_completed == False">
+                                                        <div class="o_default_snippet_text">-------------------------------------------------------------------------------------------</div>
+                                                        <div class="title">
+                                                            <!-- <field name="stage_id" readonly="1" options="{&quot;no_open&quot;: True, &quot;no_create&quot;: True}"/> -->
+                                                             <p class="o_default_snippet_text"></p>
+                                                        </div>
+                                                        <div class="arrow"></div>
+                                                    </div>
+                                                    <div class="process">
+                                                        <div class="icon"><i class="fa fa-plane"/></div>
+                                                        <div class="title">
+                                                            <field name="final_stage_id"/>
+                                                             <p class="o_default_snippet_text">This is the current stage. <br/>The responsible user forwards this to next stage</p>
+                                                        </div>
+                                                        <div class="arrow">-------------------------------</div>
+                                                    </div>
+                                                </div>
+                                            <!-- <div class="container"> -->
+                                                <!-- <div class="row g-0 mb-0">
+                                                    <div class="col-lg-3 ml-5 s_process_step pt24 pb24 o_colored_level">
+                                                        <svg class="s_process_step_connector" viewbox="0 0 152.5 80" preserveaspectratio="none" style="left: calc(50% + 40px); height: 80px; width: calc(100% - 80px);">
+                                                            <path d="M 0 40 L 152.5 40" vector-effect="non-scaling-stroke"/>
+                                                        </svg>
+                                                        <div class="">
+                                                            <i class="fa fa-pencil fa-2x mx-auto rounded-circle bg-primary"/>
+                                                        </div>
+                                                        <div class="s_process_step_content">
+                                                            <h2 class="o_default_snippet_text"><field name="first_stage"/></h2>
+                                                            <div class="o_onboarding_line position-absolute"></div>
+                                                            <p class="o_default_snippet_text">This is the initiate<br/>process of this project.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-3 s_process_step pt24 pb24 o_colored_level">
+                                                        <svg class="s_process_step_connector" viewbox="0 0 152.5 80" preserveaspectratio="none" style="left: calc(50% + 40px); height: 80px; width: calc(100% - 80px);">
+                                                            <path d="M 0 40 L 152.5 40" vector-effect="non-scaling-stroke"/>
+                                                        </svg>
+                                                        <div class="s_process_step_icon">
+                                                            <i class="fa fa-unlock-alt fa-2x mx-auto rounded-circle bg-o-color-5"/>
+                                                        </div>
+                                                        <div class="s_process_step_content">
+                                                            <h2 class="o_default_snippet_text"><field name="stage_id"/></h2>
+                                                            <p class="o_default_snippet_text">This is the current stage. <br/>The responsible user forwards this to next stage</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-3 s_process_step pt24 pb24 o_colored_level">
+                                                        <svg class="s_process_step_connector" viewbox="0 0 152.5 80" preserveaspectratio="none" style="left: calc(50% + 40px); height: 80px; width: calc(100% - 80px);">
+                                                            <path d="M 0 40 L 152.5 40" vector-effect="non-scaling-stroke"/>
+                                                        </svg>
+                                                        <div class="s_process_step_icon">
+                                                            <i class="fa fa-bars text-lg opacity-10 rounded-circle" aria-hidden="true"/>
+                                                        </div>
+                                                        <div class="s_process_step_content">
+                                                            <h2 class="o_default_snippet_text"><field name="final_stage_id"/></h2>
+                                                            <p class="o_default_snippet_text">This is the expected <br/>Stage when all process is completed</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-3 s_process_step pt24 pb24 o_colored_level">
+                                                        <svg class="s_process_step_connector" viewbox="0 0 100 20" preserveaspectratio="none">
+                                                            <path d="M 0 10 L 100 10" vector-effect="non-scaling-stroke"/>
+                                                        </svg>
+                                                        <div class="s_process_step_icon">
+                                                            <i class="fa fa-plane fa-2x mx-auto rounded-circle bg-o-color-3"/>
+                                                        </div>
+                                                        <div class="s_process_step_content">
+                                                            <h2 class="o_default_snippet_text">Complete</h2>
+                                                            <p class="o_default_snippet_text">Manager Approves this, <br/>You get Notified.</p>
+                                                        </div>
+                                                    </div>
+                                                </div> -->
+                                            <!-- </div> -->
+
+                                            <!-- <div class="row">
+                                                
                                                 <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
                                                     <div class="card">
                                                         <div class="card-body p-3">
@@ -128,7 +217,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </div> -->
                                             <div class="row mt-4">
                                                 <div class="col-lg-7 mb-lg-0 mb-4">
                                                     <div class="card">
@@ -977,12 +1066,13 @@
             <field name="priority">50</field>
             <field name="arch" type="xml">
                 <tree string="Memo Requests">
+                    <field name="name" string="Project name"/>
+                    <field name="code" string="Project code"/> 
+                    <field name="client_id" string="Client"/> 
                     <field name="date"/> 
-                    <field name="name"/>
-                    <field name="employee_id"/>
+                    <field name="employee_id" invisible="1"/>
                     <field name="set_staff" string="Assigned to"/>
-                    <field name="code"/> 
-                    <field name="state" invisible="1"/>
+                    <field name="dept_ids"/>
                     <field name="stage_id"/>
                     <field name="status_progress" widget="progressbar" string="Progress(%)"/>
                 </tree>
