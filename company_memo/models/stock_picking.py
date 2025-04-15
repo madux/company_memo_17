@@ -10,17 +10,17 @@ class StockPicking(models.Model):
     def _action_done(self):
         res = super(StockPicking, self)._action_done()
         # self.update_memo_status('Done')
-        if self.memo_id:
-            self.memo_id.is_request_completed = True
-            self.sudo().memo_id.update_final_state_and_approver()
+        # if self.memo_id and self.memo_id.memo_project_type != 'procurement':
+        #     self.memo_id.is_request_completed = True
+        #     self.sudo().memo_id.update_final_state_and_approver()
         return res
 
     def button_validate(self):
         res = super(StockPicking, self).button_validate()
         # self.update_memo_status('Done')
-        if self.memo_id:
-            self.memo_id.is_request_completed = True
-            self.sudo().memo_id.update_final_state_and_approver()
+        # if self.memo_id and self.memo_id.memo_project_type != 'procurement':
+        #     self.memo_id.is_request_completed = True
+        #     self.sudo().memo_id.update_final_state_and_approver()
         return res
     
 

@@ -34,6 +34,13 @@
             <field name="category_id" ref="category_main_memo_app_group"/>
             <!-- <field name="users" eval="[(4, ref('base.group_system'),ref('account.group_account_manager'),ref('account.group_account_invoice'))]"/> -->
         </record>
+        <!-- The licensed used will be used to give user access to so many configurable features -->
+        <record id="licensed_user" model="res.groups">
+            <field name="name">Licensed</field>
+            <!-- <field name="category_id" ref="category_main_memo_app_group"/> -->
+             <!-- <field name="users" eval="[(4, ref('base.group_user'))]"/> -->
+			<!-- <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('account.group_account_invoice'))]" /> -->
+        </record>
  
         <!-- <record id="memo_employee_see_own_rule33" model="ir.rule">
             <field name="name">Memo to Enable All Employee Access to their records</field>
@@ -67,12 +74,14 @@
             <field name="model_id" ref="model_memo_model"/>
             <field name="groups" eval="[(6, 0, [ref('base.group_user')])]"/>
             <field name="domain_force">[
-            '|','|', '|','|','|',('direct_employee_id.user_id.id','=', user.id),
+            '|','|', '|','|','|','|',
+            ('direct_employee_id.user_id.id','=', user.id),
             ('employee_id.user_id.id','=', user.id),
             ('employee_id.administrative_supervisor_id.user_id.id','=', user.id),
             ('users_followers.user_id.id','=', user.id), 
             ('approver_id.user_id.id','=', user.id),
-            ('approver_ids.user_id','=', user.id)]</field>
+            ('approver_ids.user_id','=', user.id),
+            ('create_uid','=', user.id)]</field>
         </record>
 
         <record id="memo_root_see_all_record" model="ir.rule">

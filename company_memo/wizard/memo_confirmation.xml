@@ -11,7 +11,7 @@
                         <button string="OK" class="btn-primary" special="cancel" />
                     </footer>				
                 </form>
-            </field>	
+            </field>
 	    </record>
     </data>
 </odoo>

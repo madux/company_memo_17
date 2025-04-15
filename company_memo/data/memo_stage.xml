@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="0"> 
+    <data noupdate="1"> 
         <record id="memo_initial_stage" model="memo.stage">
             <field name="name">Draft</field>
             <field name="loaded_from_data">1</field>

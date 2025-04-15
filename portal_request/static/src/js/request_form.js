@@ -1,13 +1,6 @@
-odoo.define('portal_request.portal_request_form', function (require) {
-    "use strict";
+/** @odoo-module */
 
-    require('web.dom_ready');
-    var utils = require('web.utils');
-    var ajax = require('web.ajax');
-    var publicWidget = require('web.public.widget');
-    var core = require('web.core');
-    var qweb = core.qweb;
-    var _t = core._t;  
+import publicWidget from "@web/legacy/js/public/public_widget";
 
     let alert_modal = $('#portal_request_alert_modal');
     let successful_alert = $('#successful_alert');
@@ -190,4 +183,4 @@ odoo.define('portal_request.portal_request_form', function (require) {
     });
 
 // return PortalRequestWidget;
-});
+// });

@@ -21,6 +21,7 @@
                             <tree editable="top">
                                 <field name="name"/>
                                 <field name="sequence"/>
+                                <field name="main_stage_id"/>
                                 <field name="approver_ids" widget="many2many_tags"/>
                                 <field name="is_approved_stage"/>
                             </tree>

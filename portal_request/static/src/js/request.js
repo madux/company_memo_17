@@ -1,20 +1,23 @@
-// import publicWidget from "web.public.widget";
-// import { qweb } from "web.core";
-// import { utils } from "web.utils";
-// import { ajax } from "web.ajax";
+/** @odoo-module */
 
-// const PortalRequestWidget = publicWidget.registry.PortalRequest;
+import publicWidget from '@web/legacy/js/public/public_widget';
 
-odoo.define('portal_request.portal_request', function (require) {
-    "use strict";
+$(document).ready(function () {
+    console.log(`ty ks ===== ${$('#leave_start_date').text()}`)
+    // $('#leave_start_date').datepicker('destroy').datepicker({
+    //     onSelect: function (ev) {
+    //         $('#leave_start_date').trigger('blur')
+    //     },
+    //     dateFormat: 'mm/dd/yy',
+    //     changeMonth: true,
+    //     changeYear: true,
+    //     yearRange: '2023:2050',
+    //     maxDate: null,
+    //     minDate: new Date()
+    // });
 
-    require('web.dom_ready');
-    var utils = require('web.utils');
-    var ajax = require('web.ajax');
-    var publicWidget = require('web.public.widget');
-    var core = require('web.core');
-    var qweb = core.qweb;
-    var _t = core._t;
+
+    console.log("Loading portal request module");
     const setProductdata = [];
     const setEmployeedata = [];
     let alert_modal = $('#portal_request_alert_modal');
@@ -80,37 +83,7 @@ odoo.define('portal_request.portal_request', function (require) {
             });
         }
     }
-
-    // var FormateDateToMMDDYYYY = function(dateObject) {
-    //     var d = new Date(dateObject);
-    //     var day = d.getDate();
-    //     var month = d.getMonth() + 1;
-    //     var year = d.getFullYear();
-    //     if (day < 10) {
-    //         day = "0" + day;
-    //     }
-    //     if (month < 10) {
-    //         month = "0" + month;
-    //     }
-    //     var date = month + "/" + day + "/" + year; 
-    //     return date;
-    // };
  
-    // function showAlertDialog(title, msg) {
-    //     // Load the XML templates
-    //     ajax.loadAsset('portal_request.portal_request', 'xml', '/portal_request/static/src/xml/partials.xml', {}, qweb).then(
-    //         function (qweb) {
-    //         // Templates loaded, you can now use them
-    //             var wizard = qweb.render('portal_request.alert_dialogs', {
-    //                 'msg': msg || _t('Message Body'),
-    //                 'title': title || _t('Title')
-    //             });
-    //             wizard.appendTo($('body')).modal({
-    //                 'keyboard': true
-    //             });
-    //         })
-    // }
-
     function buildProductTable(data, memo_type, require='', hidden='d-none', readon=''){
         console.log("Product table building loading")
         $.each(data, function (k, elm) {
@@ -153,9 +126,6 @@ odoo.define('portal_request.portal_request', function (require) {
                         </th>
                     </tr>`
                 )
-                // ${memo_type=="cash_advance" || memo_type=="soe" ? 1: 0}
-                // TriggerProductField(lastRow_count);
-                // $(`input[special_id='${lastRow_count}'`).attr('readonly', true);
                 setProductdata.push(elm.id)
             } else {
                 console.log('No product items found')
@@ -493,6 +463,44 @@ odoo.define('portal_request.portal_request', function (require) {
     allowClear: true,
     });
 
+    let triggerDateFields = function(){
+        $('#request_date').datepicker('destroy').datepicker({
+            onSelect: function (ev) {
+                $('#request_date').trigger('blur')
+            },
+            dateFormat: 'mm/dd/yy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: '2022:2050',
+            maxDate: null,
+            minDate: new Date()
+        });
+
+        $('#leave_start_date').datepicker('destroy').datepicker({
+            onSelect: function (ev) {
+                $('#leave_start_date').trigger('blur')
+            },
+            dateFormat: 'mm/dd/yy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: '2023:2050',
+            maxDate: null,
+            minDate: new Date()
+        });
+
+        $('#request_end_date').datepicker('destroy').datepicker({
+            onSelect: function (ev) {
+                $('#request_end_date').trigger('blur')
+            },
+            dateFormat: 'mm/dd/yy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: '2022:2050',
+            maxDate: null,
+            minDate: new Date()
+        });
+    }
+
     let checkOverlappingLeaveDate = function(thiis){
         var message = ""
         if ($('#selectRequestOption').val() === "leave_request"){
@@ -515,8 +523,6 @@ odoo.define('portal_request.portal_request', function (require) {
                         $('#leave_start_date').addClass('is-invalid', true);
                         let message = `Validation Error! ${data.message}`
                         console.log("not Passed for leave, ", message)
-                        // alert(message); 
-                        // return false
                         modal_message.text(message)
                         alert_modal.modal('show');
 
@@ -547,19 +553,7 @@ odoo.define('portal_request.portal_request', function (require) {
         $('#divEmployeeData').addClass('d-none');
         $('#selectEmployeedata').attr("required", false); 
         $('#employee_item_form_div').addClass('d-none');
-        }
- 
-    $('#leave_start_date').datepicker('destroy').datepicker({
-        onSelect: function (ev) {
-            $('#leave_start_date').trigger('blur')
-        },
-        dateFormat: 'mm/dd/yy',
-        changeMonth: true,
-        changeYear: true,
-        yearRange: '2023:2050',
-        maxDate: null,
-        minDate: new Date()
-    });
+        } 
     
     var triggerEndDate = function(minDate, maxDate){
         $('#leave_end_datex').datepicker('destroy').datepicker({
@@ -577,32 +571,40 @@ odoo.define('portal_request.portal_request', function (require) {
     
     publicWidget.registry.PortalRequestWidgets = publicWidget.Widget.extend({
         selector: '#portal-request',
+        // init() {
+        //     this._super(...arguments);
+        //     this.rpc = this.bindService("rpc");
+        // },
+        init: function () {
+            this._super.apply(this, arguments);
+            this.rpc = this.bindService("rpc");
+        },
         start: function(){
             var self = this;
             return this._super.apply(this, arguments).then(function(){
-                $('#request_date').datepicker('destroy').datepicker({
-                    onSelect: function (ev) {
-                        $('#request_date').trigger('blur')
-                    },
-                    dateFormat: 'mm/dd/yy',
-                    changeMonth: true,
-                    changeYear: true,
-                    yearRange: '2022:2050',
-                    maxDate: null,
-                    minDate: new Date()
-                });
+                // $('#request_date').datepicker('destroy').datepicker({
+                //     onSelect: function (ev) {
+                //         $('#request_date').trigger('blur')
+                //     },
+                //     dateFormat: 'mm/dd/yy',
+                //     changeMonth: true,
+                //     changeYear: true,
+                //     yearRange: '2022:2050',
+                //     maxDate: null,
+                //     minDate: new Date()
+                // });
 
-                $('#request_end_date').datepicker('destroy').datepicker({
-                    onSelect: function (ev) {
-                        $('#request_end_date').trigger('blur')
-                    },
-                    dateFormat: 'mm/dd/yy',
-                    changeMonth: true,
-                    changeYear: true,
-                    yearRange: '2022:2050',
-                    maxDate: null,
-                    minDate: new Date()
-                });
+                // $('#request_end_date').datepicker('destroy').datepicker({
+                //     onSelect: function (ev) {
+                //         $('#request_end_date').trigger('blur')
+                //     },
+                //     dateFormat: 'mm/dd/yy',
+                //     changeMonth: true,
+                //     changeYear: true,
+                //     yearRange: '2022:2050',
+                //     maxDate: null,
+                //     minDate: new Date()
+                // });
             });
 
         },
@@ -610,6 +612,7 @@ odoo.define('portal_request.portal_request', function (require) {
             var self = this; 
             return this._super.apply(this, arguments).then(function(){
                 console.log("All events start")
+                 
             })
         },
  
@@ -627,8 +630,6 @@ odoo.define('portal_request.portal_request', function (require) {
                 let product_elm = $(ev.target);
                 let product_val = product_elm.val();
                 console.log('Product value ==', product_val)
-                // let selectedproductId = product_val.split('-')[1] 
-                // console.log('Product value selected ==', selectedproductId)
                 var link = product_elm.closest(":has(input.productinput)").find('input.productinput');
                 var remove_link = product_elm.closest(":has(a.remove_field)").find('a.remove_field');
                 link.attr('id', product_val);
@@ -681,16 +682,10 @@ odoo.define('portal_request.portal_request', function (require) {
                 //computation of the total productUsedQty unit price
                 compute_total_amount();
             },
-
-            // $('#inactivelist').change(function () {
-            //     alert('changed');
-            //  });
-
             'change .otherChangeOption': function(ev){
                 if ($(ev.target).is(':checked')){
                     $('#div_other_system_details').removeClass('d-none');
                     $('#other_system_details').attr('required', true);
-                    // $('#other_system_details').addClass("is-invalid");
                 }
                 else {
                     $('#div_other_system_details').addClass('d-none');
@@ -732,12 +727,13 @@ odoo.define('portal_request.portal_request', function (require) {
                 let staff_num = $(ev.target).val();
                 if(staff_num !== ''){  
                     var self = this;
-                    this._rpc({
-                        route: `/check_staffid/${staff_num}`,
-                        params: {
-                            //'type': type
-                        },
-                    }).then(function (data) {
+                    // this.rpc({
+                    //     route: `/check_staffid/${staff_num}`,
+                    //     params: {
+                    //         //'type': type
+                    //     },
+                    self.rpc(`/check_staffid/${staff_num}`,{}
+                    ).then(function (data) {
                         console.log('retrieved staff data => '+ JSON.stringify(data))
                         if (!data.status) {
                             $(ev.target).val('')
@@ -1158,7 +1154,6 @@ odoo.define('portal_request.portal_request', function (require) {
                                     'line_checked': false,
                                     'code': 'mef00981',
                             }
-                            // input[type='text'], input[type='number']
                             $(`tr[row_count=${row_co}]`).closest(":has(input, textarea)").find('input,textarea').each(
                                 function(){
                                     if($(this).attr('name') == "product_item_id"){
@@ -1265,8 +1260,6 @@ odoo.define('portal_request.portal_request', function (require) {
     });
 
     function clearAllElement(){ 
-        // $('#phone_number').val('')
-        // $('#email_from').val('')
         $('#subject').val('')
         $('#description').val('')
         $('#amount_fig').val('');
@@ -1294,12 +1287,9 @@ odoo.define('portal_request.portal_request', function (require) {
         $('#div_other_system_details').addClass('d-none');
         $('#other_system_details').attr('required', false);
         $('#other_system_details').val('');
-        // $('#other_system_details').addClass("is-valid");
         $('#div_justification_reason').addClass('d-none');
         $('#justification_reason').attr('required', false);
         $('#justification_reason').val('');
-        // $('#justification_reason').addClass("is-valid");
     }
     var form = $('#msform')[0];
-// return PortalRequestWidget;
 });

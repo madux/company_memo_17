@@ -1,5 +1,6 @@
 from . import res_users
 from . import company_memo
+from . import work_instruction
 from . import forward_memo
 from . import account_payment
 from . import request_line
@@ -12,3 +13,6 @@ from . import hr_employee
 from . import document
 from . import ir_attachment
 from . import stock_location
+from . import waybill
+from . import sale_order
+from . import crm

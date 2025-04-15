@@ -16,17 +16,16 @@ class Forward_Wizard(models.TransientModel):
     is_officer = fields.Boolean(string="Is Officer", help="Checks if the current user is a normal officer")
     is_approver_stage = fields.Boolean(string="Is Approval stage", help="Used to determine if the last one is approver stage")
     all_superior_ids = fields.Many2many('hr.employee',string="Employees for approvals",compute="_load_all_superior_ids") 
-    dummy_conditional_stage_ids = fields.Many2many("memo.stage", 
-                                                   string="Conditional Stages")
+    dummy_conditional_stage_ids = fields.Many2many("memo.stage", string="Optional Stages")
     conditional_stage_id = fields.Many2one(
         "memo.stage", 
-        string="Conditional stage",
+        string="Optional stage",
         help="Shows list of all the stages that has memo_config_id",)
 
     has_conditional_stage = fields.Boolean(
-        string="Is Approval stage", 
+        string="Has Optional Stage", 
         default=False,
-        help="Used to determine if stage has conditional stage")
+        help="Used to determine if stage has Optional stage")
     
     # @api.depends("memo_record")
     # def get_conditional_stage_domains(self):
@@ -51,7 +50,6 @@ class Forward_Wizard(models.TransientModel):
         self.all_superior_ids = [(6,0, self._get_all_related_superior_ids())]
  
     def forward_memo(self): # Always available, 
-        # raise ValidationError('PEACE')
         if self.memo_record.memo_type.memo_key == "Payment":
             if self.memo_record.amountfig < 0:
                 raise ValidationError('If you are running a payment Memo, kindly ensure the amount is \
@@ -60,7 +58,7 @@ class Forward_Wizard(models.TransientModel):
         if self.description_two:
             msg = self.description_two
         if self.direct_employee_id:
-            body = "</br><b>{}:</b> {}</br>".format(self.env.user.name, self.description_two if self.description_two else "-")
+            body = "{}: {}".format(self.env.user.name, self.description_two if self.description_two else "-")
             memo = self.env['memo.model'].sudo().search([('id', '=', self.memo_record.id)])
             comment_msg = " "
             if memo.comments:
@@ -78,6 +76,14 @@ class Forward_Wizard(models.TransientModel):
             raise ValidationError('Please select an Employee to Direct To')
         # next_stage_id = self.get_next_stage_artifact()
         conditional_stage_id = self.conditional_stage_id.id if self.conditional_stage_id else False
-        return self.memo_record.confirm_memo(self.direct_employee_id.name, msg, False, conditional_stage_id)#, next_stage_id[1])
- 
+
+        # set the second option stage id to be true
+        second_option_stage_id = self.memo_record.stage_id.no_conditional_stage_id
+        if second_option_stage_id and conditional_stage_id:
+            if conditional_stage_id != second_option_stage_id.id:
+                # set the is 2nd option box to true if second stage was not selected as the conditional stage else False
+                self.memo_record.stage_to_skip = second_option_stage_id.id
+        # the above is very important: if set to true, the 2nd optional stage will
+        # not be applicable when it gets to that point
+        return self.memo_record.confirm_memo(self.direct_employee_id, msg, False, conditional_stage_id)#, next_stage_id[1])
     

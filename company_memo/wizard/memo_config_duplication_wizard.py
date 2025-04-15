@@ -33,6 +33,7 @@ class MemoConfigDuplicationWizard(models.TransientModel):
                     'active': stage.active,
                     'approver_ids': stage.approver_ids,
                     'is_approved_stage': stage.is_approved_stage,
+                    'main_stage_id': stage.id,
                 })
                 dummy_memo_stage_ids.append(dummy_memo_stage.id)
             res.update({'dummy_memo_stage_ids': [(6, 0, dummy_memo_stage_ids)]})
@@ -62,6 +63,7 @@ class MemoConfigDuplicationWizard(models.TransientModel):
                 })
                 if self.dummy_memo_stage_ids:
                     for sequence, stage in enumerate(self.dummy_memo_stage_ids, 900): 
+                        # original_stage_obj = self.env['memo.stage'].browse(stage.main_stage_id)
                         new_stage = self.env['memo.stage'].create({
                             'name': stage.name,
                             'sequence': sequence,
@@ -70,6 +72,16 @@ class MemoConfigDuplicationWizard(models.TransientModel):
                             'approver_ids': [(6, 0, stage.approver_ids.ids)],
                             'is_approved_stage': stage.is_approved_stage,
                             'memo_config_id': new_config.id,
+                            # new implementation for stage duplication
+                            'sub_stage_ids': [(4, stg.copy().id) for stg in stage.main_stage_id.sub_stage_ids],
+                            'required_invoice_line': [(4, rinv.copy().id) for rinv in stage.main_stage_id.required_invoice_line],
+                            'required_document_line': [(4, rdoc.copy().id) for rdoc in stage.main_stage_id.required_document_line],
+                            'no_conditional_stage_id': stage.main_stage_id.no_conditional_stage_id.id,
+                            'yes_conditional_stage_id': stage.main_stage_id.yes_conditional_stage_id.id,
+                            'memo_has_condition': stage.main_stage_id.memo_has_condition,
+                            'no_condition': stage.main_stage_id.no_condition,
+                            'yes_condition': stage.main_stage_id.yes_condition,
+
                         })
                         stage_ids.append(new_stage.id)
                     new_config.update({'stage_ids': stage_ids})
@@ -89,6 +101,7 @@ class DummyMemoStage(models.TransientModel):
 
     duplication_wizard_id = fields.Many2one('memo.config.duplication.wizard', string='Duplication Wizard')
     name = fields.Char(string="Stage Name")
+    main_stage_id = fields.Many2one('memo.stage',string="Original Stage ID")
     sequence = fields.Integer(string="Sequence")
     active = fields.Boolean(string="Active")
     approver_ids = fields.Many2many('hr.employee', 'employee_wizard_rel', 'employee_id', 'employee_wizard_id', string="Approvers")

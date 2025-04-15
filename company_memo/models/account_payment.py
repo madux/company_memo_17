@@ -23,13 +23,12 @@ class AccountPayment(models.Model):
             else:
                 payment.is_internal_transfer = True
 
-    def action_post(self):
-        res = super(AccountPayment, self).action_post()
-        if self.memo_reference:
-            # self.memo_reference.state = "Done"
-            self.memo_reference.is_request_completed = True
-            self.sudo().memo_reference.finalize_payment()
-        return res
+    # def action_post(self):
+    #     res = super(AccountPayment, self).action_post()
+    #     if self.memo_reference:
+    #         # self.memo_reference.is_request_completed = True
+    #         # self.sudo().memo_reference.finalize_payment()
+    #     return res
  
 
 

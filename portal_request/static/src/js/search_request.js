@@ -1,13 +1,17 @@
-odoo.define('portal_request.search_request', function (require) {
-    "use strict";
+/** @odoo-module **/
 
-    require('web.dom_ready');
-    var utils = require('web.utils');
-    var ajax = require('web.ajax');
-    var publicWidget = require('web.public.widget');
-    var core = require('web.core');
-    var qweb = core.qweb;
-    var _t = core._t;  
+import publicWidget from "@web/legacy/js/public/public_widget";
+
+// odoo.define('portal_request.search_request', function (require) {
+//     "use strict";
+
+//     require('web.dom_ready');
+//     var utils = require('web.utils');
+//     var ajax = require('web.ajax');
+//     var publicWidget = require('web.public.widget');
+//     var core = require('web.core');
+//     var qweb = core.qweb;
+//     var _t = core._t;  
 
     publicWidget.registry.SearchRequestWidgets = publicWidget.Widget.extend({
         selector: '#search_request_section',
@@ -37,4 +41,4 @@ odoo.define('portal_request.search_request', function (require) {
     });
 
 // return PortalRequestWidget;
-});
+// });

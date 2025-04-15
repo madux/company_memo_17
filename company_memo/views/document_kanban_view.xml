@@ -109,7 +109,7 @@
         </field>
     </record>
     <menuitem id="internal_memo_document_menu_model" name="Document Request-"
-            parent="internal_memo_menu_model_main2" sequence="4"/>
+            parent="internal_memo_menu_model_main2" sequence="40"/>
 
     <menuitem id="document_folder_dashboard" action="company_memo.document_folder_dashboard_action_main"
         sequence="2" parent="company_memo.internal_memo_document_menu_model" name="Overview"/>

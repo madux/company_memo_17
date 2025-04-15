@@ -39,6 +39,13 @@
                         </div>
                         <field name="example_preview" invisible="example_invalid== True"/>
                     </div>
+                    <div class="oe_right alert alert-info" role="alert" invisible="memo_id == False or state != 'draft'">
+                        <separator string="Populate PO lines"/>
+                        <div>  
+                            Use this options to Automatically populate purchase orders by default or kindly select from the PO or project reference
+                            <button name="action_populate_all_project_pos" string="Populate Invoice Line" class="oe_highlight" type="object"/>
+                        </div>
+                    </div>
                 </xpath>
             </field>
         </record>

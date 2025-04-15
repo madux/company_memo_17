@@ -23,6 +23,7 @@ class MemoSubStageLine(models.Model):
     _name = "memo.sub.stage"
 
     name = fields.Char("Name", required=True)
+    code = fields.Char("Name", required=False)
     memo_id = fields.Many2one(
         "memo.model", 
         string="Memo Ref"
@@ -31,6 +32,7 @@ class MemoSubStageLine(models.Model):
         "memo.stage", 
         string="Stage id"
         )
+    
     sub_stage_done = fields.Boolean("Is Done", default=False)
     invoice_ids = fields.Many2many(
         'account.move', 
@@ -41,7 +43,7 @@ class MemoSubStageLine(models.Model):
         store=True,
         domain="[('move_type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]"
         )
-    
+    description = fields.Text("Description", required=False)
     attachment_ids = fields.Many2many(
         'ir.attachment', 
         'memo_sub_stage_ir_attachment_rel',
@@ -51,18 +53,43 @@ class MemoSubStageLine(models.Model):
         store=True,
         domain="[('res_model', '=', '0')]"
         )
+    
+    approver_ids = fields.Many2many(
+        "hr.employee", 
+        string="Responsible Approvers")
+    
+    require_po_confirmation = fields.Boolean("Require PO confirmation", default=False)
+    require_so_confirmation = fields.Boolean("Require SO confirmation", default=False)
+    require_bill_payment = fields.Boolean("Require PO/SO payment", default=False)
+    duration_config = fields.Integer(
+        "Duration", 
+        default=20, 
+        help="Used to compute the duration of which the task at the stage should last"
+        )
 
     def confirm_sub_stage_done(self):
+        # validates to ensure all document and invoices are paid or attached
+        # add all invoices and document to main invoice lines
         self.responsible_approver_right()
         if self.sub_stage_id.required_document_line:
             self.validate_compulsory_document()
         if self.sub_stage_id.required_invoice_line:
             self.validate_invoice_line()
         self.sub_stage_done = True
+        if self.invoice_ids:
+            self.memo_id.invoice_ids = [(4, rec.id) for rec in self.invoice_ids]
+        if self.attachment_ids:
+            self.memo_id.attachment_ids = [
+            (4, rec.id) for rec in self.attachment_ids
+            ]
+        if self.memo_id.stage_id.require_po_confirmation or self.memo_id.stage_id.require_bill_payment:
+            self.memo_id.procurement_confirmation()
 
     def responsible_approver_right(self):
         user =  self.env.user
-        if not user.id in [r.user_id.id for r in self.sub_stage_id.approver_ids] or user.id in [r.user_id.id for r in self.sub_stage_id.memo_config_id.approver_ids]:
+        useritem = [r.user_id.id for r in self.approver_ids if self.approver_ids] + [r.user_id.id for r in self.sub_stage_id.memo_config_id.approver_ids] + [r.user_id.id for r in self.sub_stage_id.approver_ids]
+        # raise ValidationError(useritem)
+        if user.id not in useritem:
             raise ValidationError("You are not allowed to validate this task / process")
 
     def validate_compulsory_document(self):
@@ -87,7 +114,7 @@ class MemoSubStageLine(models.Model):
         invoice_ids = self.mapped('invoice_ids').filtered(
                     lambda iv: iv.state in ['draft']
                 )
-        # if self.memo_type.memo_key == "Payment" and invoice_ids:
+                
         if invoice_ids:
             for count, inv in enumerate(invoice_ids, 1):
                 matching_stage_invoice = self.sub_stage_id.mapped('required_invoice_line').filtered(
@@ -97,7 +124,6 @@ class MemoSubStageLine(models.Model):
                 if matching_stage_invoice.compulsory:
                     if inv.payment_state not in ['paid', 'partial', 'in_payment']:
                         raise ValidationError(f"Invoice at line {count} must be posted and paid before proceeding")
-
                     invoice_line = inv.mapped('invoice_line_ids')
                     if not invoice_line:
                         raise ValidationError(f"Add at least one invoice billing line at line {count}")
@@ -106,14 +132,13 @@ class MemoSubStageLine(models.Model):
                         )
                     if invoice_line_without_price:
                         raise ValidationError(f"All invoice line must have a price amount greater than 0 at line {count}")
-                # else:
-                #     self.invoice_ids = [(3, inv.id)]
-
+                
 
 class MemoStageDocumentLine(models.Model):
     _name = "memo.stage.document.line"
 
     name = fields.Char("Name", required=True)
+    code = fields.Char("Code", required=False)
     compulsory = fields.Boolean("Compulsory", default=False)
     # memo_stage_id = fields.Many2one(
     #     "memo.stage", 
@@ -123,7 +148,19 @@ class MemoStageDocumentLine(models.Model):
         "memo.model", 
         string="Memo Ref"
         )
-    
+
+
+class POInvoiceLine(models.Model):
+    _name = "po.invoice.line"
+    _description = "invoice line for po"
+
+    item = fields.Char(string="Item")
+    amount = fields.Float(string="Amount")
+    date_order = fields.Date(string="Date Validity")
+    po_invoice_id = fields.Many2one(
+        'memo.stage.invoice.line', 
+        string="Stage Invoice ID")
+
 
 class MemoStageInvoiceLine(models.Model):
     _name = "memo.stage.invoice.line"
@@ -142,6 +179,13 @@ class MemoStageInvoiceLine(models.Model):
         string="Invoice type",
         required=True,
     )
+    code = fields.Char("Code", required=False)
+    po_invoice_ids = fields.One2many(
+        "po.invoice.line",
+        "po_invoice_id",
+        string="PO Invoice lines", 
+        )
+
     
 class MemoLogisticItems(models.Model):
     _name = "logistic.items"
@@ -167,7 +211,56 @@ class MemoLogisticItems(models.Model):
         "stock.picking",
         string="Picking ref"
         )
+    picking_type_id = fields.Many2one(
+        "stock.picking.type",
+        string="Operation type"
+        )
     quantity_to_move = fields.Integer("Quantity to move", required=True)
+
+    def action_generate_picking(self):
+        if not self.product_id:
+            raise ValidationError("Please provide a product")
+        
+        
+        if not self.source_location_id:
+            raise ValidationError("Please provide source location id")
+        if not self.destination_location_id:
+            raise ValidationError("Please provide destination id")
+        if not self.picking_type_id:
+            raise ValidationError("Please provide operation type id")
+        vals = {
+                'scheduled_date': fields.Date.today(),
+                'picking_type_id': self.picking_type_id.id,
+                'origin': self.memo_id.code,
+                'memo_id': self.id,
+                'partner_id': self.memo_id.client_id.id,
+                'move_ids_without_package': [(0, 0, {
+                                'name': self.memo_id.code, 
+                                'picking_type_id': self.picking_type_id.id,
+                                'location_id': self.source_location_id.id,
+                                'location_dest_id': self.destination_location_id.id,
+                                'product_id': self.product_id.id,
+                                'product_uom_qty': self.quantity_to_move,
+                                'date_deadline': fields.Date.today(),
+                            })]
+            }
+        if self.stock_picking_id:
+            self.stock_picking_id.move_ids_without_package = False
+            self.stock_picking_id.update(vals)
+        else:
+            stock_picking = self.env['stock.picking'].create(vals)
+            self.memo_id.stock_picking_id = stock_picking.id
+            self.stock_picking_id = stock_picking.id
+            # stock_line = stock_picking.write({'move_ids_without_package': [(0, 0, {
+            #                         'name': self.memo_id.code, 
+            #                         'picking_type_id': self.picking_type_id.id,
+            #                         'location_id': self.source_location_id.id,
+            #                         'location_dest_id': self.destination_location_id.id,
+            #                         'product_id': self.product_id.id,
+            #                         'product_uom_qty': self.quantity_to_move,
+            #                         'date_deadline': fields.Date.today(),
+            #                     })]
+            #         }) 
 
 
 class MemoType(models.Model):
@@ -192,12 +285,42 @@ class MemoStage(models.Model):
 
     name = fields.Char("Name", required=False)
     sequence = fields.Integer("Sequence", required=False)
+    description = fields.Text("Description", required=False)
     active = fields.Boolean("Active", default=True)
     is_approved_stage = fields.Boolean("Is approved stage", help="if set true, it is used to determine if this stage is the final approved stage")
     approver_id = fields.Many2one("hr.employee", string="Responsible Approver")
     approver_ids = fields.Many2many("hr.employee", string="Responsible Approvers")
     memo_config_id = fields.Many2one("memo.config", string="Parent settings", required=False)
     loaded_from_data = fields.Boolean(string="Loaded from data", default=False)
+    publish_on_dashboard = fields.Boolean("Publish on Dashboard", default=False)
+    require_po_confirmation = fields.Boolean("Require PO confirmation", default=False)
+    require_so_confirmation = fields.Boolean("Require SO confirmation", default=False)
+    require_bill_payment = fields.Boolean("Require PO/SO payment", default=False)
+    require_waybill_detail = fields.Boolean("Require Waybill validation", default=False)
+    stage_type = fields.Selection(
+        [
+        ("normal", "Normal Stage"), 
+        ("invoice_check", "Invoice Check"), 
+        ("validate_invoice", "Invoice Validate"), 
+        ("file_check", "File Check"),
+        ("file_closure", "File Closure"),
+        ("closed", "Closure"),
+        ], string="Stage type", 
+        help="""
+        Used to check the stage level"""
+    )
+    enabled_date_validity_config = fields.Boolean("Date Validity", default=False)
+    enabled_date_procured_config = fields.Boolean("Date Procured", default=False)
+    enable_procurment_amount_config = fields.Boolean("Procure Amount", default=False)
+    enabled_date_paid_config = fields.Boolean("Date paid", default=False)
+    duration_config = fields.Integer(
+        "Duration", 
+        default=20, 
+        help="Used to compute the duration of which the task at the stage should last"
+        ) 
+     
+    freeze_po_budget = fields.Boolean("Freeze budget", help="If checked,  users wont be able to add PO", default=False)
+    
     # has_condition = fields.Selection([
     #     ("none", ""),
     #     ("yes", "Yes"),
@@ -217,25 +340,20 @@ class MemoStage(models.Model):
     no_condition = fields.Boolean(string="No",
                                       default=False, 
                                       help="if condition is No, set the stage for No condition")
+    # is_2nd_option = fields.Boolean(string="2nd Option",
+    #                                   default=False, 
+    #                                   help="when this is checked, system checks and jump to the next stage")
 
-    @api.onchange('memo_has_condition')
-    def onchange_has_condition(self):
-        if self.memo_has_condition:
-            self.yes_condition = True
-            self.no_condition = True
-        else:
-            self.yes_condition = False
-            self.no_condition = False
-
+    
     # if system has condition,user must select stage to jump to
     yes_conditional_stage_id = fields.Many2one(
         "memo.stage", 
-        string="Yes Conditional stage",
+        string="First Option stage",
         help="Shows list of all the stages that has memo_config_id")
     
     no_conditional_stage_id = fields.Many2one(
         "memo.stage", 
-        string="No Conditional stage",
+        string="Second Option stage",
         help="Shows list of all the stages that has memo_config_id")
     
     dummy_memo_config_stage_ids = fields.Many2many(
@@ -254,7 +372,6 @@ class MemoStage(models.Model):
         string="Sub stages",
         help="This are sub stages of the parent stage")
     is_sub_stage = fields.Boolean("Is sub stage", default=False)
-
     required_invoice_line = fields.Many2many(
         'memo.stage.invoice.line',
         'memo_stage_invoice_rel',
@@ -269,7 +386,16 @@ class MemoStage(models.Model):
         'memo_stage_id',
         string='Documents required'
         )
-    
+
+    @api.onchange('memo_has_condition')
+    def onchange_has_condition(self):
+        if self.memo_has_condition:
+            self.yes_condition = True
+            self.no_condition = True
+        else:
+            self.yes_condition = False
+            self.no_condition = False
+
     @api.depends("memo_config_id")
     def show_all_related_memo_config_stage(self):
         if self.memo_config_id:
@@ -322,6 +448,46 @@ class MemoConfig(models.Model):
         domain=lambda self: self.get_publish_memo_types()
         )
     
+    prefix_code = fields.Char(
+        string='Prefix Code',
+        copy=True,
+        )
+    department_code = fields.Char(
+        string='Department Code',
+        copy=True,
+        help="Serves as the suffix code for the department in question",
+        size=1
+        )
+    
+    config_tag_id = fields.Many2one(
+        'memo.config.tag',
+        string='Tag',
+        required=False,
+        copy=True
+        )
+    
+    def update_all_memo_with_project_type(self):
+        '''Just to be used for migration of legacy records'''
+        memo = self.env['memo.model'].search([
+            ('memo_setting_id', '=', self.id)
+        ])
+        if memo:
+            for m in memo:
+                m.write({'memo_project_type': self.project_type})
+    
+    project_type = fields.Selection([('agency', 'AGENCY'),
+                                ('cfwd', 'CFWD'),
+                                ('travel', 'TRAVEL'),
+                                ('procurement', 'PROCUREMENT'),
+                                ('warehouse', 'WAREHOUSING'),
+                                ('transport', 'TRANSPORT'),
+                                ('project_pro', 'PROJECT PROCUREMENT REQUEST'),
+                                ('all', 'ALL'),
+                              ], string='Project type', index=True,
+                             copy=False,
+                             store=True,
+                             help='for logistic only')
+    
     approver_ids = fields.Many2many(
         'hr.employee',
         'hr_employee_memo_config_rel',
@@ -367,15 +533,36 @@ class MemoConfig(models.Model):
     def _check_duplicate_memo_type(self):
         memo = self.env['memo.config'].sudo()
         for rec in self:
-            duplicate = memo.search([('memo_type', '=', rec.memo_type.id),('department_id', '=', rec.department_id.id)], limit=2)
+            duplicate = memo.search([
+                ('memo_type', '=', rec.memo_type.id),
+                ('department_id', '=', rec.department_id.id)], limit=2)
             if len([r for r in duplicate]) > 1:
                 raise ValidationError("A memo type has already been configured for this record, kindly locate it and select the approvers")
 
     def _get_related_stages(self):
-        if self.id:
-            stage_ids = self.env['memo.stage'].search([('memo_config_id', '=', self.id)]) 
-            return [('id', 'in', stage_ids.ids)]
-
+        for rec in self:
+            if rec.id:
+                stage_ids = self.env['memo.stage'].search([('memo_config_id', '=', rec.id)]) 
+                return [('id', 'in', stage_ids.ids)]
+            
+    def update_stage_type(self):
+        all_memo_config = self.env['memo.config'].search([])
+        for rec in self:
+            for stg in rec.stage_ids:
+                if stg.name in ['Close of Operation', 'Create Client Invoice']:
+                    stg.stage_type = "invoice_check" 
+                elif stg.name in ['Validate Client Invoice', 'Invoicing', 'Invoice', 'invoicing']:
+                    stg.stage_type = "validate_invoice" 
+                elif stg.name in ['Operational File Check', 'Operation File Check', 'Financial File Check']:
+                    stg.stage_type = "file_check"
+                elif stg.name in ['File Closure']:
+                    stg.stage_type = "file_closure"
+                elif stg.name in ['Closure', 'Closed', 'Done']:
+                    stg.stage_type = "closed"
+                    
+                else:
+                    stg.stage_type = "normal"
+                    
     def auto_configuration(self):
         # TODO: To be used to dynamically generate configurations 
         # for all departments using default stages such as 
@@ -435,8 +622,17 @@ class MemoConfig(models.Model):
             'context': {
                 'default_employees_follow_up_ids': self.approver_ids.ids,
                 'default_allowed_companies_ids': self.allowed_for_company_ids.ids,
+                'default_allowed_companies_ids': self.allowed_for_company_ids.ids,
             },
         }
+
+
+class MemoConfigTag(models.Model):
+    _name = "memo.config.tag"
+    _description = "Memo Tag"
+
+    name = fields.Char('Name', required=True)
+    active = fields.Boolean('Active', default=True)
 
 
 class MemoCategory(models.Model):

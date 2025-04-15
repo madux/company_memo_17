@@ -900,8 +900,8 @@ class PortalRequest(http.Controller):
 			else ['soe', 'cash_advance'] if type in ['soe', 'cash_advance'] \
 				else ['leave_request'] if type in ['leave_request'] \
 					else ['employee_update'] if type in ['employee_update'] \
-						else ['Internal', 'procurement_request', 'vehicle_request', 'material_request'] \
-							if type in ['Internal', 'procurement_request','server_access' 'vehicle_request', 'material_request'] \
+						else ['Internal', 'procurement_request', 'procurement', 'vehicle_request', 'material_request'] \
+							if type in ['Internal', 'procurement_request','procurement','server_access' 'vehicle_request', 'material_request'] \
 								else all_memo_type_keys
 		request_id = request.env['memo.model'].sudo()
 		domain = [

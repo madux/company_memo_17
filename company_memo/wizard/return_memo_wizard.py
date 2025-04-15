@@ -19,15 +19,18 @@ class Send_Memo_back(models.Model):
     # def get_url(self, id, name):
     #     base_url = http.request.env['ir.config_parameter'].sudo().get_param('web.base.url')
     #     base_url += '/web#id=%d&view_type=form&model=%s' % (id, name)
-    #     return "<a href={}> </b>Click<a/>. ".format(base_url)
+    #     return "<a href={}> Click<a/>. ".format(base_url)
 
     def get_url(self,id):
         base_url = http.request.env['ir.config_parameter'].sudo().get_param('web.base.url')
         base_url += "/my/request/view/%s" % (id)
-        return "<a href={}> </b>Click<a/>. ".format(base_url)
+        return "<a href={}> Click<a/>. ".format(base_url)
     
     def get_previous_stage(self, memo_record):
-        stages = memo_record.memo_setting_id.stage_ids.ids
+        stages = memo_record.memo_setting_id.mapped('stage_ids').filtered(
+            lambda skp: skp.id != memo_record.stage_to_skip.id
+        ).ids
+        # stages = memo_record.memo_setting_id.stage_ids.ids
         current_stage = memo_record.stage_id
         current_stage_index = stages.index(current_stage.id)
         new_previous_stage = stages[current_stage_index -1] if current_stage_index != 0 else stages[0]
@@ -35,15 +38,30 @@ class Send_Memo_back(models.Model):
             return new_previous_stage
         else:
             return False
+        
+    def clear_current_stage_actions(self):
+        current_stage_invoices = self.memo_record.mapped('invoice_ids').filtered(
+            lambda inv: inv.memo_id.stage_id.id == self.memo_record.stage_id.id and inv.payment_state not in ['paid', 'in_payment'])
+        current_stage_documents = self.memo_record.mapped('attachment_ids').filtered(
+            lambda att: att.memo_id.stage_id.id == self.memo_record.stage_id.id and not att.is_locked)
+        current_sub_stages = self.memo_record.mapped('memo_sub_stage_ids').filtered(
+            lambda sub: not sub.sub_stage_done)
+        
+        self.memo_record.sudo().write({
+            'memo_sub_stage_ids': [(3, doc.id) for doc in current_sub_stages],
+            'attachment_ids': [(3, doc.id) for doc in current_stage_documents],
+            'invoice_ids': [(3, inv.id) for inv in current_stage_invoices],
+        })
 
     def post_refuse(self):
         get_record = self.env['memo.model'].search([('id','=', self.memo_record.id)])
+        self.clear_current_stage_actions()
         get_previous_stage = self.get_previous_stage(get_record)
         # raise ValidationError(get_previous_stage)
-        reasons = "<b><h4>Refusal Message From: %s </b></br> Please refer to the reasons below:</h4></br>* %s." %(self.env.user.name,self.reason)
+        reasons = "<h4>Refusal Message From: %s  Please refer to the reasons below:</h4>* %s." %(self.env.user.name,self.reason)
         if self.reason:
-            msg_body = "Dear Sir/Madam, <br/>We wish to notify you that a Memo request from {} has been refused / returned. <br/>\
-             <br/>Kindly {} to Review<br/> <br/>Thanks".format(self.memo_record.employee_id.name, self.get_url(self.id))
+            msg_body = "Dear Sir/Madam, We wish to notify you that a Memo request from {} has been refused / returned. \
+             Kindly {} to Review Thanks".format(self.memo_record.employee_id.name, self.get_url(self.id))
             get_record.write({
                 # 'state':'Refuse',
                 'reason_back': reasons,

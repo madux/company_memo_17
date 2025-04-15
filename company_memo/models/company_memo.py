@@ -6,12 +6,17 @@ from odoo import http
 import random
 from lxml import etree
 from bs4 import BeautifulSoup
-
+import io
+import base64
+import qrcode
 import logging
+from datetime import date, datetime, timedelta
+import json
+
 
 _logger = logging.getLogger(__name__)
 
-
+    
 class Memo_Model(models.Model):
     _name = "memo.model"
     _description = "Internal Memo"
@@ -19,11 +24,63 @@ class Memo_Model(models.Model):
     _rec_name = "name"
     _order = "id desc"
     
-    # @api.model
-    # def create(self, vals):
-    #     sequence = self.env['ir.sequence'].next_by_code('memo.model')
-    #     vals['code'] = str(sequence)
-    #     return super(Memo_Model, self).create(vals)
+    @api.model
+    def create(self, vals):
+        code_seq = self.env["ir.sequence"].next_by_code("memo.model") or "/" if not self.code else self.code
+        dept_seq = self.env['ir.sequence'].next_by_code('department-num')
+        child_code = False
+        po_memo = vals.get('memo_project_type')
+        ms_config = self.env['memo.config'].search([
+            ('memo_type', '=', vals['memo_type'])
+            ], limit=1)
+        project_prefix = 'REF'
+        dept_suffix = ''
+        if ms_config:
+            project_prefix = ms_config.prefix_code or 'REF'
+            dept_suffix = ms_config.department_code or 'X'
+        if vals.get('project_memo_id'):
+            project_memo_id = vals.get('project_memo_id', False) # id
+            all_child_projects = self.env['memo.model'].sudo().search([
+                ('project_memo_id', '=', project_memo_id),
+                ('code', 'not in', [False,"", None]),
+                ])
+            parent_project = self.env['memo.model'].sudo().browse([project_memo_id])
+            # raise ValidationError(f"what is split code =={all_child_projects}")
+            split_code = ['00']
+            if all_child_projects:
+                last_child_project_code = all_child_projects[-1].code # get the last memos' code
+                if last_child_project_code:
+                    split_code = last_child_project_code.split('-') # get last number and add 1 to increment [PO-00045-X-100]
+                    # i.e [PO-00045-X-100] ==> [PO-00045, X, 100]
+                    # raise ValidationError(f"what is split code =={split_code} and parent project {project_memo_id}")
+                    child_code = int(split_code[-1]) + 1
+                # else:
+                #     raise ValidationError(f"Parent File code Not found: Please manually locate the file associated with the parent code and modify the last code manually e.g modify the last [PO-00045-X-100]")
+            else:
+                split_code = parent_project.code.split('-') # [PO-00045-X-100]
+                last_suffix_spc = split_code[-1]
+                first_suffix = ""
+                if last_suffix_spc:
+                    if last_suffix_spc[0].isdigit(): #['180']:
+                        child_code = int(split_code[-1]) + 1
+                    else: #['100']
+                        if len(last_suffix_spc) > 3:
+                            first_suffix = last_suffix_spc[0:2] 
+                            sc = last_suffix_spc[2:] 
+                            # res = int(sc) + 1
+                        else:
+                            first_suffix = last_suffix_spc[0]
+                            sc = last_suffix_spc[1:] 
+                        res = int(sc) + 1
+                        child_code = f"{first_suffix}{res}"
+                # raise ValidationError(f"what is split code 2 =={split_code} and parent project {project_memo_id}")
+            vals['code'] = f"{split_code[0]}-0{child_code}" if po_memo not in ['project_pro'] else ""
+        else:
+            vals['code'] = f"{project_prefix}{code_seq}-0{0}" if po_memo not in ['project_pro'] else "" # e.g [PO-00045-X-100]
+        result = super(Memo_Model, self).create(vals)
+        if self.attachment_ids:
+            self.attachment_ids.write({'res_model': self._name, 'res_id': self.id})
+        return result
 
     def _compute_attachment_number(self):
         attachment_data = self.env['ir.attachment'].sudo().read_group([
@@ -48,7 +105,7 @@ class Memo_Model(models.Model):
     def _default_user(self):
         return self.env.context.get('default_user_id') or \
          self.env['res.users'].search([('id', '=', self.env.uid)], limit=1)
- 
+    
     # memo_type = fields.Selection(
     #     [
     #     ("Payment", "Payment"), 
@@ -63,19 +120,49 @@ class Memo_Model(models.Model):
     #     ("cash_advance", "Cash Advance"),
     #     ("soe", "Statement of Expense"),
     #     ("recruitment_request", "Recruitment Request"),
+    #     ("transport", "Transport"),
     #     ], string="Memo Type", required=True)
     def get_publish_memo_types(self):
         memo_configs = self.env['memo.config'].search([('active', '=', True)])
         memo_type_ids = [r.memo_type.id for r in memo_configs]
         return [('id', 'in', memo_type_ids)]
-     
     
+    @api.model
+    def default_get(self, fields):
+        res = super(Memo_Model, self).default_get(fields)
+        memo_project_type = self.env.context.get('default_memo_project_type')
+        domain = [('active', '=', True)]
+        if memo_project_type:
+            domain = [('active', '=', True), ('project_type', '=', memo_project_type)]
+        memo_configs = self.env['memo.config'].search(domain)
+        res.update({'dummy_memo_types': [(6, 0, [rec.memo_type.id for rec in memo_configs])]})
+        return res
+        
     memo_type = fields.Many2one(
         'memo.type',
         string='Memo type',
         required=True,
         copy=True,
-        domain=lambda self: self.get_publish_memo_types(),
+        # domain=lambda self: self.get_publish_memo_types(),
+        ) 
+    alert_option= fields.Selection(
+        [
+        ("normal", "Normal"), 
+        ("warning", "Warning"), 
+        ("danger", "Danger"),
+        ], string="Alert Option", 
+        compute="compute_deadline",
+        help="""
+        Used to determine the text to display 
+        when task is coming to end date"""
+    )
+    
+    dummy_memo_types = fields.Many2many(
+        'memo.type',
+        'memo_model_type_rel',
+        'memo_type_id', 
+        'memo_id',
+        string='Dummy Memo type',
         )
     memo_type_key = fields.Char('Memo type key', readonly=True)
     name = fields.Char('Subject', size=400)
@@ -91,13 +178,16 @@ class Memo_Model(models.Model):
     dept_ids = fields.Many2one('hr.department', string ='Department', readonly = True, store =True, compute="employee_department",)
     description = fields.Char('Note')
     project_id = fields.Many2one('account.analytic.account', 'Project')
+    project_memo_id = fields.Many2one('memo.model', 'Parent Project')
     vendor_id = fields.Many2one('res.partner', 'Vendor')
     amountfig = fields.Float('Budget Amount', store=True, default=1.0)
     description_two = fields.Text('Reasons')
     phone = fields.Char('Phone', store=True)
+    work_instruction_description = fields.Char('WK instruction')
     email = fields.Char('Email', related='employee_id.work_email')
     reason_back = fields.Char('Return Reason')
     file_upload = fields.Binary('File Upload')
+    total_so_amount = fields.Float('Invoice Amount', compute="compute_total_confirmed_so_amount")
     file_namex = fields.Char("FileName")
     stage_id = fields.Many2one(
         'memo.stage', 
@@ -105,6 +195,12 @@ class Memo_Model(models.Model):
         store=True,
         domain=lambda self: self._get_related_stage(),
         )
+            
+    po_memo_ids = fields.One2many(
+        'memo.model',
+        'project_memo_id',
+        string='Additional PO process')
+    
     state = fields.Selection([('submit', 'Draft'),
                                 ('Sent', 'Sent'),
                                 ('Approve', 'Waiting For Payment / Confirmation'),
@@ -124,14 +220,37 @@ class Memo_Model(models.Model):
     client_email = fields.Char('Client Email', related="client_id.email", store=True)
     client_country_id = fields.Char('Client Country', related="client_id.country_id.name", store=True)
 
-    task_todo = fields.Integer('Task todo', compute="_compute_task_info", store=True)
-    task_active = fields.Integer('Task active', compute="_compute_task_info", store=True)
-    task_done = fields.Integer('Task done',  compute="_compute_task_info", store=True)
-    paid_expense = fields.Integer('Paid expense', compute="_compute_task_info", store=True)
-    expected_revenue = fields.Integer('Expected revenue', compute="_compute_task_info", store=True)
-    realized_income = fields.Integer('Realized Income', compute="_compute_task_info", store=True)
-    ##
+    task_todo = fields.Integer('Task todo')#, compute="_compute_task_info", store=True)
+    task_active = fields.Integer('Task active')#, compute="_compute_task_info", store=True)
+    task_done = fields.Integer('Task done')#, compute="_compute_task_info", store=True)
+    task_todo_percentage = fields.Integer('Task todo (%)', compute="compute_task_percentage", store=True)
+    task_active_percentage = fields.Integer('Task active (%)', compute="compute_task_percentage", store=True)
+    task_done_percentage = fields.Integer('Task done (%)', compute="compute_task_percentage", store=True)
+    
+    
+    todo_document = fields.Integer('Documents todo')#, compute="compute_document_info", store=True)
+    active_document = fields.Integer('Active Document')#, compute="compute_document_info", store=True)
+    done_document = fields.Integer('Document Done')#, compute="compute_document_info", store=True)
+    
+    paid_expense = fields.Float('Paid expense')
+    expected_revenue = fields.Float('Expected revenue')
+    realized_income = fields.Float('Realized Income')
 
+    # Reporting 
+    amount_to_pay = fields.Float('Amount to pay')
+    total_revenue = fields.Float('Revenue')
+    total_budget = fields.Float('Budgets')
+    amount_paid = fields.Float('Paid Invoices')
+    amount_unpaid = fields.Float('Expected payment')
+    total_so_balance = fields.Float('Balance', compute="compute_balance")
+    total_so_expected_balance = fields.Float('Expected balance')
+    total_income = fields.Float('Income', compute="compute_income")
+    total_unpaid_po_expenses = fields.Float('Unpaid expenses')
+    total_unpaid_so_incomes = fields.Float('Unpaid income')
+    total_paid_po_expenses = fields.Float('Paid expenses', store=True, help="total sum of po confirmed")#, compute="depend_po_ids", )
+
+    # Reporting 
+    
     invoice_id = fields.Many2one(
         'account.move', 
         string='Invoice', 
@@ -144,28 +263,96 @@ class Memo_Model(models.Model):
         store=True,
         readonly=True
         )
-    
     to_create_document = fields.Boolean(
         'Registered in Document Management',
         default=False,
         help="Used to create in Document Management")
-    
     external_memo_request = fields.Boolean(string='External request')
+    # TRANSPORT
+    truck_company_name = fields.Many2one('res.partner', string='Truck company Name')
+    truck_reg = fields.Char(string='Truck registration No.')
+    truck_type = fields.Char(string='Truck Type')
+    truck_driver = fields.Many2one('res.partner', string='Driver details')
+    truck_driver_phone = fields.Char(string='Driver Phone')
+    waybill_ids = fields.One2many(
+        'memo.transport.waybill', 
+        'memo_id',
+        string='Waybill details'
+        ) 
+            
+    waybill_from = fields.Char(string='Pickup Location?')
+    waybill_to = fields.Char(string='Drop Off Location')
+    waybill_date = fields.Datetime(string='Date of Transportation')
+    waybill_expected_arrival_date = fields.Datetime(string='Expected Arrival')
+    waybill_note = fields.Char(string='Waybill Note')
+    #### DURATIONS
+    enabled_date_validity = fields.Date("Date Validity", default=False)
+    enabled_date_procured = fields.Date("Date Procured", default=False)
+    enable_procurment_amount = fields.Float("Procure Amount", default=False)
+    enabled_date_paid = fields.Date("Date paid", default=False)
+    validity_set = fields.Boolean("Validity Set", default=False)
+    task_start_date = fields.Date(
+        "Task start Date",
+        default=fields.Date.today()
+        )
+    waybill_items = fields.Integer(string='No of items', compute="compute_waybill_item")
+    
+    @api.depends('waybill_ids')
+    def compute_waybill_item(self):
+        for rec in self:
+            if rec.waybill_ids:
+                items = len(rec.waybill_ids.ids)
+                rec.waybill_items = items
+            else:
+                rec.waybill_items = 0
+                
+    task_end_date = fields.Date(
+        "Task End Date",
+        # compute="compute_task_end_date",
+        store=True
+        ) 
+    remaining_task_duration = fields.Integer(
+        "Remaining task duration",
+        compute="compute_remaining_task_duration",
+        help="the duration in days btw stage moved date and current date"
+        )
     
     
-    # @api.onchange('cash_advance_reference')
-    # def cash_advance_reference(self):
-    #     raise ValidationError('dere')
-    #     if self.cash_advance_reference:
-    #         raise ValidationError('dere')
-    #         # if not self.employee_id:
-    #         for rec in self.cash_advance_reference.mapped('product_ids').filtered(lambda s: s.retired == False):
-    #             self.product_ids = [(0, 0, {
-    #                 'memo_id': rec.id,
-    #                 'product_id': rec.product_id.id,
-    #                 'description': rec.description,
-    #                 'amount_total': rec.amount_total,
-    #             })]
+    percentage_of_remaining_task = fields.Integer(
+        "Expiry days in percentage",
+        compute="compute_remaining_task_duration",
+        help="the duration in percentage btw stage moved date and current date"
+        )
+    
+    stage_duration = fields.Integer(
+        "Task duration",
+        compute="compute_stage_duration",
+        )
+                
+    # percentage_of_total_task_todo = fields.Integer(
+    #     "Percentage of task todo",
+    #     )
+    # percentage_of_total_task_active = fields.Integer(
+    #     "Percentage of task todo",
+    #     )
+    
+    # @api.depends('task_start_date')
+    # def compute_task_end_date(self):
+        # pass 
+        # for rec in self:
+        #     if rec.stage_id and rec.task_start_date:
+        #         stage_duration = rec.stage_id.duration_config # default 20
+        #         rec.task_end_date = rec.task_start_date + timedelta(days=stage_duration) 
+        #     else:
+        #         rec.task_end_date = False
+         
+                
+    # Work instruction
+    work_instruction_ids = fields.One2many(
+        'memo.work.instruction',
+        'memo_id',
+        string='Work Instruction items',
+        )
 
     soe_advance_reference = fields.Many2one('memo.model', 'SOE ref.')
     cash_advance_reference = fields.Many2one(
@@ -226,14 +413,11 @@ class Memo_Model(models.Model):
         required=False,
         help="Method of computation of the period annuity",
         readonly=True,
-        states={"submit": [("readonly", False)]},
-        default="interest",
     )
     loan_amount = fields.Monetary(
         currency_field="currency_id",
         required=False,
         readonly=True,
-        states={"submit": [("readonly", False)]},
     )
     currency_id = fields.Many2one(
         "res.currency", 
@@ -243,7 +427,6 @@ class Memo_Model(models.Model):
     periods = fields.Integer(
         required=False,
         readonly=True,
-        states={"submit": [("readonly", False)]},
         help="Number of periods that the loan will last",
         default=12,
     )
@@ -253,12 +436,10 @@ class Memo_Model(models.Model):
         help="State here the time between 2 depreciations, in months",
         required=False,
         readonly=True,
-        states={"submit": [("readonly", False)]},
     )
     start_date = fields.Date(
         help="Start of the moves",
         readonly=True,
-        states={"submit": [("readonly", False)]},
         copy=False,
     )
     loan_reference = fields.Integer(string="Loan Ref")
@@ -280,39 +461,30 @@ class Memo_Model(models.Model):
     
     ###############3 RECRUITMENT ##### 
     job_id = fields.Many2one('hr.job', string='Requested Position',
-                             states={'submit': [('required', True)],
-                                     'submit':[('readonly', False)],
-                                     },
                              help='The Job Position you expected to get more hired.',
                              )
     
     job_tmp = fields.Char(string="Job Title",
                           size=256,
-                          readonly=True,
-                          states={'submit': [('required', True)],
-                                     'submit':[('readonly', False)],
-                                     },)
+                          readonly=True)
     
     established_position = fields.Selection([('yes', 'Yes'),
                                 ('no', 'No'),
                               ], string='Established Position', index=True,
                              copy=False,
                              readonly=True,
-                             store=True,
-                             states={'submit': [('required', True)],
-                                     'submit':[('readonly', False)],
-                                     })
+                             store=True)
     recruitment_mode = fields.Selection([('Internal', 'Internal'),
                                 ('External', 'External'),
                                 ('Outsourced', 'Outsourced'),
                               ], string='Recruitment Mode', index=True,
                              copy=False,
                              readonly=True,
-                             store=True,
-                             states={'submit': [('required', True)],
-                                     'submit':[('readonly', False)],
-                                     })
-    requested_department_id = fields.Many2one('hr.department', string ='Requested Department for Recruitment') 
+                             store=True)
+    requested_department_id = fields.Many2one(
+        'hr.department', 
+        string ='Requested Department for Recruitment'
+        ) 
     qualification = fields.Char('Qualification')
     age_required = fields.Char('Required Age')
     years_of_experience = fields.Char('Years of Experience')
@@ -321,21 +493,10 @@ class Memo_Model(models.Model):
                                         required=False,
                                         index=True,
                                         )
-    recommended_by = fields.Many2one('hr.employee', string='Recommended by',
-                                     states={
-                                         'submit':[('readonly', False)],
-                                     })
-    date_expected = fields.Date('Expected Date',
-                                states={
-                                         'submit': [('required', True)],
-                                         'submit':[('readonly', False)],
-                                     }, index=True)
+    recommended_by = fields.Many2one('hr.employee', string='Recommended by')
+    date_expected = fields.Date('Expected Date', index=True)
 
-    closing_date = fields.Date('Closing Date',
-                                states={
-                                         'submit': [('required', True)],
-                                         'submit':[('readonly', False)],
-                                     }, index=True)
+    closing_date = fields.Date('Closing Date')
     
     invoice_ids = fields.Many2many(
         'account.move', 
@@ -344,7 +505,7 @@ class Memo_Model(models.Model):
         'invoice_memo_id',
         string='Invoice', 
         store=True,
-        domain="[('move_type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]"
+        domain="[('state', '!=', 'cancel')]"
         )
     
     # MEMO THINGS 
@@ -366,26 +527,28 @@ class Memo_Model(models.Model):
         string='Sub Stages', 
         store=True,
         )
+    stage_to_skip = fields.Many2one(
+        'memo.stage', 
+        string='Stage to skip', 
+        store=True,
+        help="Used to determine stage not to be included in this memo"
+        )
     
     final_stage_id = fields.Char('final stage', compute="get_final_stage")
     first_stage = fields.Char('first stage', compute="get_first_stage")
-
-    @api.depends("memo_setting_id")
-    def get_first_stage(self):
-        for record in self:
-            if record.memo_setting_id and record.memo_setting_id.stage_ids:
-                first_stage = record.memo_setting_id.stage_ids[0]
-                record.first_stage = first_stage.name
-            else:
-                record.first_stage = False
-
-    @api.depends("memo_setting_id")
-    def get_final_stage(self):
-        for record in self:
-            if record.memo_setting_id and record.memo_setting_id.stage_ids:
-                record.final_stage_id = record.memo_setting_id.stage_ids[-1].name
-            else:
-                record.final_stage_id = False
+    memo_project_type = fields.Char(string="Project type", help="For logistic companies")
+    work_order_code = fields.Char(
+        string="Work Order Code", 
+        store=True,
+        help="Used to store work order number"
+        )
+    frame_agreement_ids = fields.Many2many(
+        'memo.frame.agreement', 
+        'memo_frame_agreement_rel',
+        'memo_id',
+        'memo_frame_id',
+        string="Frame Agreement"
+        )
 
     dashboard_memo_ids = fields.Many2many(
         'memo.model', 
@@ -437,13 +600,303 @@ class Memo_Model(models.Model):
         'memo_id',
         string="Packing list", copy=False)
     
-    computed_stage_ids = fields.Many2many('memo.stage', compute='_compute_stage_ids', store=True) 
+    computed_stage_ids = fields.Many2many('memo.stage', compute='_compute_stage_ids', store=True)
+    po_ids = fields.Many2many('purchase.order', 
+                              store=True)
+    so_ids = fields.Many2many('sale.order', 
+                              store=True)
+    freeze_po_budget = fields.Boolean(
+        "Freeze budget", 
+        help="If checked,  users wont be able to add PO", 
+        default=False
+        )
+    to_unfreezed_budget = fields.Boolean(
+        "Allow to unfreezed budget", 
+        help="If checked, system triggers validation of adding reasons for requesting for the budget unfreeze", 
+        default=False
+        )
+    unfreezed_budget_reason = fields.Text(
+        "Reason to unfreezed budget", 
+        default=False
+        )
 
+    qr_code_commonpass = fields.Binary(string="QR Code")
+    
+    ##** dashboard computed fields **##
+    total_cost = fields.Float(
+        'PO Cost', 
+        compute="compute_dashboard_total", 
+        store=True,
+        help="computes the total sale order lines in naira value"
+        )
+    total_revenued = fields.Float(
+        'Revenue', 
+        store=True, 
+        compute="compute_dashboard_total", 
+        help="computes the total po in naira value")
+    margin_total = fields.Float('Margin', store=True, compute="compute_rev_cost")
+
+    @api.depends("total_cost", "total_revenue")
+    def compute_rev_cost(self):
+        for rec in self:
+            total_cost = rec.total_cost or 0
+            total_revenued = rec.total_revenued or 0
+            rec.margin_total = total_revenued - total_cost
+
+    total_so_to_be_invoiced = fields.Float('Total SO to be Invoiced', compute="compute_dashboard_total")
+    total_po_to_be_invoiced = fields.Float('Total PO to be Invoiced', compute="compute_dashboard_total")
+    
+    total_paid_cost = fields.Float('Total PO Paid', compute="compute_dashboard_total")
+    total_paid_revenue = fields.Float('Total Paid',store=True, compute="compute_dashboard_total", help="total of All paid SO")
+    
+    total_closed_paid_cost = fields.Float('Total PO Paid', compute="compute_dashboard_total")
+    total_closed_paid_revenue = fields.Float('Total SO Paid',store=True, compute="compute_dashboard_total", help="total of All paid SO")
+    
+    total_budgeted = fields.Float('Total Budgeted', compute="compute_dashboard_total")
+    total_realized_percentage = fields.Float(
+        'Realized / Revenue', 
+        store=True,
+        compute="compute_dashboard_total",
+        help="total of paid SO * 100 / All Confirmed SO")
+    
+    total_revenue_percentage = fields.Float(
+        'Revenue / Cost', 
+        store=True,
+        compute="compute_dashboard_total",
+        help="Percentage of confirmed SO against cost budget")
+    
+    cost_revenue_margin = fields.Float(
+        'Revenue / Cost Margin', 
+        store=True,
+        compute="compute_revenue_margin")
+    
+    displayed_cost_revenue_margin = fields.Char(
+        '', 
+        store=True,
+        compute="compute_revenue_margin")
+    
+    second_quad_percentage = fields.Float(
+        '', 
+        store=True,
+        compute="compute_dashboard_total",)
+    displayed_second_quad_percentage = fields.Char(
+        '', 
+        store=True,
+        compute="compute_dashboard_total")
+ 
+    third_quad_percentage = fields.Float(
+        '', 
+        store=True,
+        compute="compute_dashboard_total",)
+    displayed_third_quad_percentage = fields.Char(
+        '', 
+        store=True,
+        compute="compute_dashboard_total")
+    
+    fourth_quad_percentage = fields.Float(
+        '', 
+        store=True,
+        compute="compute_dashboard_total",)
+    displayed_fourth_quad_percentage = fields.Char(
+        '', 
+        store=True,
+        compute="compute_dashboard_total")
+    
+    frame_agreement_budget = fields.Float(
+        'Frame Agreement', 
+        store=True,
+        compute="compute_dashboard_total")
+    
+    frame_agreement_budget_percentage = fields.Float(
+        'Budget balance', 
+        store=True,
+        compute="compute_dashboard_total")
+    
+    default_percentage_target = fields.Float(
+        'Default Percentage', 
+        store=True,
+        default=100)
+    
+    is_cash_advance_retired = fields.Boolean(
+        string="Is cash Advanced Retired", 
+        help="Used to determine if user has fully retired his cash advance"
+        ) 
+    
+    ## stock  fields ##
+    stock_picking_id = fields.Many2one(
+        "stock.picking",
+        string="Stock picking"
+        )
+    picking_type_id = fields.Many2one(
+        "stock.picking.type",
+        string="Operation type"
+        )
+
+    def get_memo_po_orders(self):
+        if self:
+            pos = self.env['purchase.order'].search([('memo_id', '=', self.id)])
+            return [('id', '=', 0)] if not pos else [('id', 'in', pos.ids)]
+        
+    @api.depends('stage_id')
+    def compute_stage_duration(self):
+        for rec in self:
+            if rec.stage_id:
+                stage_duration = rec.stage_id.duration_config # default 20
+                rec.stage_duration = stage_duration
+            else:
+                rec.stage_duration = 0
+                
+    @api.depends('so_ids.amount_total')
+    def compute_total_confirmed_so_amount(self):
+        for rec in self:
+            total = 0.0
+            if rec.so_ids:
+                total += sum([so.amount_total for so in rec.mapped('so_ids').filtered(lambda s: s.state not in ['draft', 'cancel'])])
+            rec.total_so_amount = total 
+                   
+    @api.depends('task_end_date')
+    def compute_remaining_task_duration(self):
+        for rec in self:
+            if rec.task_end_date:
+                diff = rec.task_end_date - fields.Date.today() # e.g 10
+                days_difference = diff.days
+                rec.remaining_task_duration = diff.days
+                stage_duration = rec.stage_id.duration_config if rec.stage_id.duration_config > 0 else 1 # default 20
+                rec.percentage_of_remaining_task = diff.days * 100 / stage_duration
+                # computing for alert option
+                if days_difference <= 0: # two days to the deadline
+                    rec.alert_option = 'danger'
+                elif days_difference in range(1, 5):
+                    rec.alert_option = 'warning'
+                elif days_difference >= 5:
+                    rec.alert_option = 'normal'
+            else:
+                rec.remaining_task_duration = 0
+                rec.percentage_of_remaining_task = 0
+                rec.alert_option = ""
+    
+    @api.depends('task_todo', 'task_active', 'task_done')
+    def compute_task_percentage(self):
+        for rec in self:
+            todo, active, done = rec.task_todo, rec.task_active, rec.task_done
+            total_sum_task = todo + active + done
+            if rec.task_todo or rec.task_active or rec.task_done:
+            # if rec.name:
+                rec.task_todo_percentage = todo * 100  / total_sum_task
+                rec.task_active_percentage = active * 100  / total_sum_task
+                rec.task_done_percentage = done * 100  / total_sum_task
+            else:
+                rec.task_todo_percentage = 0 
+                rec.task_active_percentage = 0 
+                rec.task_done_percentage = 0
+                
+    def print_way_bill(self): 
+        return self.env.ref('company_memo.print_waybill_report').report_action(self)
+
+    def print_po(self):
+        if not self.po_ids:
+            raise ValidationError("Sorry !!! There is no PO to print")
+        return self.env.ref('company_memo.print_po_bill_report').report_action(self)
+
+    def send_client_mail_gate_pass(self):
+        pass
+    
+    # @api.onchange('cash_advance_reference')
+    # def cash_advance_reference(self):
+    #     raise ValidationError('dere')
+    #     if self.cash_advance_reference:
+    #         raise ValidationError('dere')
+    #         # if not self.employee_id:
+    #         for rec in self.cash_advance_reference.mapped('product_ids').filtered(lambda s: s.retired == False):
+    #             self.product_ids = [(0, 0, {
+    #                 'memo_id': rec.id,
+    #                 'product_id': rec.product_id.id,
+    #                 'description': rec.description,
+    #                 'amount_total': rec.amount_total,
+    #             })]
+    
+    def action_add_extra_po(self):
+        view = self.env.ref('company_memo.memo_model_new_simple_form_view')
+        return {
+                'name':'Request PO Confirmation',
+                'type':'ir.actions.act_window',
+                'view_type':'form',
+                'res_model':'memo.model',
+                'views':[(view.id, 'form')],
+                'view_id':view.id,
+                'target':'current',
+                'context': {
+                    'default_project_memo_id': self.id,
+                    'default_memo_type': self.env.ref('company_memo.memo_config_po_extra_approval').id,
+                    'default_client_id': self.client_id.id,
+                    'default_employee_id': self.employee_id.id,
+                    'default_name': f"PO Confirmation - For Project {self.code}",
+                    # 'default_to_unfreezed_budget': True,
+                    'default_memo_project_type': 'project_pro',
+                    # 'default_to_memo_project_type': 'procurement',
+                },
+                }
+
+    @api.depends("memo_setting_id")
+    def get_first_stage(self):
+        for record in self:
+            if record.memo_setting_id and record.memo_setting_id.stage_ids:
+                first_stage = record.memo_setting_id.stage_ids[0]
+                record.first_stage = first_stage.name
+            else:
+                record.first_stage = False
+
+    @api.depends("memo_setting_id")
+    def get_final_stage(self):
+        for record in self:
+            if record.memo_setting_id and record.memo_setting_id.stage_ids:
+                record.final_stage_id = record.memo_setting_id.stage_ids[-1].name
+            else:
+                record.final_stage_id = False
+                
+    def create_qr_code(self, code):
+        qr = qrcode.QRCode()
+        qr.add_data(code)
+        return qr.make_image(fill_color="black", back_color="white")
+    
+    def qr_code(self):
+        img = self.create_qr_code(self.code)
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        self.write({
+            'qr_code_commonpass': img_str,
+        })
+
+    @api.depends('attachment_ids')
+    def compute_document_info(self):
+        for rec in self:
+            todo = 0
+            active = 0
+            done = 0
+            if rec.attachment_ids:
+                attachment_ids = rec.mapped('attachment_ids')
+                for doc in attachment_ids:
+                    active += 1
+                    if doc and not doc.datas:
+                        todo += 1
+                    if doc.is_locked:
+                        done += 1
+                rec.todo_document = todo
+                rec.active_document = active
+                rec.done_document = done
+            else:
+                rec.todo_document = 0
+                rec.active_document = 0
+                rec.done_document = 0
+            
     @api.depends('stage_id.memo_config_id')
     def _compute_stage_ids(self):
         for record in self:
             if record.stage_id.memo_config_id:
-                record.computed_stage_ids = record.stage_id.memo_config_id.stage_ids
+                record.computed_stage_ids = record.stage_id.memo_config_id.mapped('stage_ids').filtered(
+                    lambda publish: publish.publish_on_dashboard
+                )
             else:
                 record.computed_stage_ids = False 
     
@@ -463,9 +916,351 @@ class Memo_Model(models.Model):
                 },
                 }
 
-    @api.depends('memo_setting_id')
-    def _compute_task_info(self):
+    # @api.onchange('invoice_ids')
+    # def onchange_realized(self):
+    #     self.update_dashboard_finances()
+
+    # @api.onchange('po_ids')
+    # def onchange_po_ids(self):
+    #     self.update_dashboard_finances() 
+
+    # @api.onchange('so_ids')
+    # def onchange_so_ids(self):
+    #     self.update_dashboard_finances()
+
+    @api.depends('total_revenue', 'total_budget')
+    def compute_balance(self):
+        for s in self:
+            result = s.total_budget - s.total_revenue
+            s.total_so_balance = result
+
+    @api.depends('total_revenue', 'total_budget')
+    def compute_income(self):
+        for s in self:
+            result = s.total_revenue - s.total_budget
+            s.total_income = result
+
+    def update_dashboard_finances(self): 
+        invoice_expenses = 0
+        invoice_income_paid = 0
+        po_balance, so_balance = 0, 0
+        budgets, so_amount_total = 0, 0
+
+        for rec in self.po_ids:
+            for inv in rec.invoice_ids:
+                invoice_expenses += inv.amount_total_signed
+                po_balance += inv.amount_residual
+            budgets += rec.amount_total
+        for rec in self.so_ids:
+            for inv in rec.invoice_ids:
+                invoice_income_paid += inv.amount_total_signed #
+                so_balance += inv.amount_residual #
+            so_amount_total += rec.amount_total
+        # BUdget
+        self.total_budget = budgets
+        # Expenses
+        self.total_paid_po_expenses = invoice_expenses
+        self.amount_to_pay = budgets
+        # Revenue
+        self.total_revenue = so_amount_total
+        # Due Invoice
+        self.amount_unpaid = abs(so_balance) # so_amount_total - invoice_income_paid
+
+        # Balance
+        self.total_so_balance = budgets - abs(invoice_income_paid)
+        self.amountfig = sum([amt.amount_total for amt in self.invoice_ids])
+    
+    @api.depends('total_cost', 'total_revenue')
+    def compute_revenue_margin(self):
         for rec in self:
+            total = float(rec.total_revenue - rec.total_cost)
+            rec.cost_revenue_margin = round(float(total), 2)
+            # rec.displayed_cost_revenue_margin = '₦' + str("{0:,}".format(total)) if total > 0 else '₦ 0.00'
+            rec.displayed_cost_revenue_margin = '₦' + str("{0:,}".format(float(str(total).split('.')[0]))) if total > 0 else '₦ 0.00'
+     
+    @api.depends('name')
+    def compute_dashboard_total(self):
+        for rec in self:
+            closed_stage = rec.memo_setting_id.stage_ids[-1].id if rec.memo_setting_id.stage_ids else 0
+            # total_budgeted, total_revenue, total_paid_revenue = 0,0,0
+            
+            if rec.name: 
+                frame_agreement_budget = 0
+                # cost = rec.compute_po_naira_dollar_value(rec.so_ids)
+                budget, revenue, paid_revenue, total_so_to_be_invoiced = rec.compute_so_naira_dollar_value(rec.so_ids)
+                _logger.info(f"here is the computed value: {budget} {revenue} {paid_revenue}")
+                frame_agreement_budget = sum([r.agreed_budget for r in rec.frame_agreement_ids])
+                sum_po_ids = rec.compute_po_naira_dollar_value(rec.po_ids)
+                total_cost = sum_po_ids[0]
+                _logger.info(f"here is the computed value: {total_cost} {budget} {revenue} {paid_revenue}")
+                
+                rec.total_cost = total_cost
+                total_so_to_be_invoiced = total_so_to_be_invoiced if rec.stage_id.id != closed_stage else 0 
+                total_po_to_be_invoiced = sum_po_ids[3] if rec.stage_id.id != closed_stage else 0
+                
+                rec.total_so_to_be_invoiced = total_so_to_be_invoiced
+                rec.total_po_to_be_invoiced = total_po_to_be_invoiced
+                
+                total_paid_cost = sum_po_ids[2]
+                total_paid_revenue = paid_revenue
+                
+                rec.total_paid_cost = total_paid_cost
+                rec.total_paid_revenue = total_paid_revenue
+                
+                total_closed_paid_revenue = paid_revenue if rec.stage_id.id == closed_stage else 0.00
+                total_closed_paid_cost = sum_po_ids[2] if rec.stage_id.id == closed_stage else 0.00
+                rec.total_closed_paid_revenue =total_closed_paid_revenue
+                rec.total_closed_paid_cost = total_closed_paid_cost
+                
+                
+                ##### tasks ######
+                rec.total_revenue = float(revenue)
+                rec.total_budget = budget if budget > 1 else frame_agreement_budget \
+                    if frame_agreement_budget > 1 else sum_po_ids[0]
+                # pos not in draft or cancel state
+                confirmed_pos = rec.mapped('po_ids').filtered(
+                    lambda po: po.state not in ['draft', 'cancel'])
+                rec.total_paid_po_expenses = sum([amt.amount_total for amt in confirmed_pos])
+                
+                ##################
+                rec.total_budgeted = budget
+                rec.total_revenued = float(revenue)
+                
+                cr = rec.total_budgeted if budget > 1 else 1
+                cost = rec.total_budgeted if budget > 1 else 1
+
+                def compute_percentage(cost, rev):
+                    '''sum = cost + revenue
+                        (total_revenue_percentage = revenue * 100 / sum) = 45%
+                        total_cost_percentage = cost * 100 / sum
+                        e.g cost 250,000, revenue = 200,000 
+                        
+                        graph 45 / 55
+                        '''
+                    sum_revenue_cost = cost + rev
+                    sum_revenue_cost = sum_revenue_cost if sum_revenue_cost > 1 else 1
+                    total_revenue_percent = rev * 100.0 / sum_revenue_cost
+                    return round(total_revenue_percent, 2)
+                
+                rec.total_revenue_percentage = compute_percentage(rec.total_cost, rec.total_revenue)
+                
+                rec.second_quad_percentage = compute_percentage(total_po_to_be_invoiced, total_paid_cost)
+                rec.displayed_second_quad_percentage = f"{rec.second_quad_percentage} %"
+                
+                rec.third_quad_percentage = compute_percentage(total_closed_paid_cost, total_closed_paid_revenue)
+                totalrealised = total_closed_paid_revenue - total_closed_paid_cost
+                # rec.displayed_third_quad_percentage = '₦' + str("{0:,}".format(totalrealised)) if totalrealised > 0 else "₦ 0.00"
+                rec.displayed_third_quad_percentage = '₦' + str("{0:,}".format(float(str(totalrealised).split('.')[0]))) if totalrealised > 0 else "₦ 0.00"
+                
+                rec.fourth_quad_percentage = compute_percentage(total_so_to_be_invoiced, total_paid_revenue)
+                rec.displayed_fourth_quad_percentage = f"{rec.fourth_quad_percentage} %"
+                
+                rec.frame_agreement_budget = frame_agreement_budget
+                
+                fab = frame_agreement_budget if rec.frame_agreement_budget > 1 else 1
+                rec.frame_agreement_budget_percentage = revenue * 100 / fab
+                
+                tr = revenue if revenue > 1 else 1
+                rec.total_realized_percentage = paid_revenue * 100 / tr
+                
+            else:
+                rec.total_budgeted = 0
+                rec.total_revenue = 0.00
+                rec.total_paid_revenue = 0.00
+                rec.total_revenue_percentage = 0.00
+                rec.second_quad_percentage = 0.00
+                rec.third_quad_percentage = 0.00
+                rec.fourth_quad_percentage = 0.00
+                
+                rec.frame_agreement_budget = 0.00
+                rec.total_realized_percentage = 0.00
+                rec.total_cost = 0.00
+                rec.total_paid_cost = 0.00
+                rec.total_paid_po_expenses = 0.00
+                rec.total_closed_paid_revenue = 0.00
+                rec.total_closed_paid_cost = 0.00
+                rec.total_so_to_be_invoiced = 0.00
+                
+                rec.total_po_to_be_invoiced = 0.00
+                rec.total_budget = 0.00
+                rec.total_revenued = 0.00 
+                
+            # general_data = [{"values": [{"label": "Revenue", "type": "past", "value": total_revenue},
+            #               {"label": "Cost", "type": "past", "value": total_budgeted}
+            #               ]},
+            #                 {"title": "", "key": "Residual amount", "is_sample_data": False}
+            #                 ]
+            # invoice_data = [{"values": [{"label": "Revenue", "type": "past", "value": total_paid_revenue},
+            #               {"label": "Cost", "type": "past", "value": total_budgeted}
+            #               ]},
+            #                 {"title": "", "key": "Residual amount", "is_sample_data": False}]
+            # rec.finance_general_dashboard_graph = json.dumps(general_data)
+            # rec.finance_invoice_dashboard_graph = json.dumps(invoice_data)
+    
+    def view_general_finance(self):
+        pass 
+                
+    def compute_so_naira_dollar_value(self, so_ids, currency='NGN'):
+        total_budget_revenue, total_invoiced_revenue, total_paid_revenue, total_so_to_be_invoiced = 0.00, 0.00, 0.00, 0.00
+        if so_ids:
+            currency_usd_id = self.env.ref('base.USD') 
+            usd_rate = currency_usd_id.mapped('rate_ids')
+            rate = usd_rate[0].inverse_company_rate
+            for so in so_ids:
+                currency_id = so.pricelist_id.currency_id
+                # compute btw dates of date approve
+                two_date_before, two_date_after = so.date_order + timedelta(days=-2), so.date_order + timedelta(days=2)
+                if currency in ['Naira', 'NGN']:
+                    # do conversion to naira value
+                    if currency_id.name == 'USD' or currency_id.id == 1:
+                        # set the inverse company rate. ie compute from USD to naira
+                        # filter the currency rate as at that time, if not found, used the current rate
+                        # e.g 22 sep < 24 sep > 26 sept
+                        
+                        currency_rate = currency_id.mapped('rate_ids').filtered(
+                            lambda cr: two_date_before.date() < cr.name and two_date_after.date() > cr.name
+                            )
+                        currency_rate_alternative = currency_id.rate_ids
+                        if currency_rate.ids: # or currency_rate_alternative:
+                            # rate = currency_rate[0].inverse_inverse_company_rate# or currency_rate_alternative[0].inverse_inverse_company_rate
+                            rate = currency_rate[0].inverse_company_rate# or currency_rate_alternative[0].inverse_inverse_company_rate
+                            total_budget_revenue += float(so.amount_total * rate)
+                            total_invoiced_revenue += float(so.amount_total * rate) if so.state not in ['cancel'] else 0.00
+                            total_so_to_be_invoiced += float(so.amount_total * rate) if so.invoice_status not in ['invoiced'] else 0.00
+                            total_paid_revenue += float(so.amount_total * rate) if so.invoice_status in ['invoiced'] else 0.00
+                        elif usd_rate:
+                            rate = usd_rate[0].inverse_company_rate
+                            total_budget_revenue += float(so.amount_total * rate)
+                            total_invoiced_revenue += float(so.amount_total * rate) if so.state not in ['cancel'] else 0.00
+                            total_paid_revenue += float(so.amount_total * rate) if so.invoice_status in ['invoiced'] else 0.00
+                            total_so_to_be_invoiced += float(so.amount_total * rate) if so.invoice_status not in ['invoiced'] else 0.00
+                        else:
+                            raise ValidationError('You must ensure that both currencies (NGN, USD) has at least an update rate ids')
+                    else: # value to display is in naira
+                        total_budget_revenue += float(so.amount_total)
+                        total_invoiced_revenue += float(so.amount_total) if so.state not in ['cancel'] else 0.00
+                        total_paid_revenue += float(so.amount_total) if so.invoice_status in ['invoiced'] else 0.00
+                        total_so_to_be_invoiced += float(so.amount_total) if so.invoice_status not in ['invoiced'] else 0.00
+                else: 
+                    # Convert all value to USD value
+                    _logger.info(f'Rate SO converted {so.amount_total} --- {so.amount_total / 1600}')
+                    if currency_id.name in ['NGN', 'Naira', False]:# or currency_id.currency_unit_label == 'Naira':
+                        currency_rate = usd_rate.filtered(
+                            lambda cr: two_date_before.date() < cr.name and two_date_after.date() > cr.name)
+                        if currency_rate.ids:
+                            # _logger.info(f'Rate sxxxx SO {currency_usd_id} --- {so}... {currency_rate} or {usd_rate}')
+                            rate = currency_rate[0].inverse_company_rate or usd_rate[0].inverse_company_rate
+                            # total += so.amount_total / rate
+                            total_budget_revenue += float(so.amount_total / rate)
+                            total_invoiced_revenue += float(so.amount_total / rate) if so.state not in ['cancel'] else 0.00
+                            total_paid_revenue += float(so.amount_total / rate) if so.invoice_status in ['invoiced'] else 0.00
+                            total_so_to_be_invoiced += float(so.amount_total / rate) if so.invoice_status not in ['invoiced'] else 0.00
+                            # ie. 50000 * 1600
+                        elif usd_rate:
+                            rate = usd_rate[0].inverse_company_rate
+                            total_budget_revenue += float(so.amount_total / rate)
+                            total_invoiced_revenue += float(so.amount_total / rate) if so.state not in ['cancel'] else 0.00
+                            total_paid_revenue += float(so.amount_total / rate) if so.invoice_status in ['invoiced'] else 0.00
+                            total_so_to_be_invoiced += float(so.amount_total / rate) if so.invoice_status not in ['invoiced'] else 0.00
+                            _logger.info(f"AT WHAT RATE {so.name} {so.amount_total} -{rate} TOTAL {total_budget_revenue}")
+                        else:
+                            raise ValidationError('You must ensure that currencies (USD) has at least an update rate ids')
+                    else: # value to display is in USD
+                        _logger.info(f"AT WHAT RATE 2{so.name}")
+                        # total += so.amount_total
+                        total_budget_revenue += float(so.amount_total)
+                        total_invoiced_revenue += float(so.amount_total) if so.state not in ['cancel'] else 0.00
+                        total_paid_revenue += float(so.amount_total) if so.invoice_status in ['invoiced'] else 0.00
+                        total_so_to_be_invoiced += float(so.amount_total) if so.invoice_status not in ['invoiced'] else 0.00
+        _logger.info(f"TOTAL COMPUTED 2 {total_budget_revenue} =--- {total_invoiced_revenue},  -- {total_paid_revenue}")
+        return round(total_budget_revenue, 2), round(total_invoiced_revenue, 2), round(total_paid_revenue, 2),  round(total_so_to_be_invoiced, 2)
+    
+    def compute_po_naira_dollar_value(self, poo, currency='NGN'):
+        total_cost, total_invoiced_cost, total_paid_cost, total_po_to_be_invoiced = 0.00, 0.00, 0.00, 0.00
+        if poo:
+            _logger.info(f'TEST MY {poo}')
+            for po in poo:
+                currency_id = po.currency_id
+                # compute btw dates of date approve
+                two_date_before, two_date_after = po.date_approve or po.date_order + timedelta(days=-2), po.date_approve or po.date_order + timedelta(days=2)
+                if currency in ['Naira', 'NGN']:
+                    # do conversion to naira value
+                    if currency_id.name == 'USD' or currency_id.id == 1:
+                        # set the inverse company rate. ie compute from USD to naira
+                        # filter the currency rate as at that time, if not found, used the current rate
+                        # e.g 22 sep < 24 sep > 26 sept
+                        currency_rate = currency_id.mapped('rate_ids').filtered(
+                            lambda cr: two_date_before.date() < cr.name and two_date_after.date() > cr.name
+                            )
+                        currency_usd_id = self.env.ref('base.USD')
+                        usd_rate = currency_usd_id.mapped('rate_ids')
+                        
+                        currency_rate_alternative = currency_id.rate_ids
+                        if currency_rate.ids: # if currency_rate or usd_rate:
+                            _logger.info(f"am joj {currency_rate}")
+                            rate = currency_rate[0].inverse_company_rate# or currency_rate_alternative[0].inverse_inverse_company_rate
+                            total_cost += po.amount_total * rate
+                            total_invoiced_cost += po.amount_total * rate if po.state not in ['draft', 'cancel'] else 0.00
+                            total_paid_cost += po.amount_total * rate if po.invoice_status in ['invoiced'] else 0.00
+                            total_po_to_be_invoiced += float(po.amount_total * rate) if po.invoice_status not in ['invoiced'] else 0.00
+                        
+                            # ie. 50000 * 0.002600
+                        elif usd_rate:
+                            rate = usd_rate[0].inverse_company_rate
+                            total_cost += po.amount_total * rate
+                            total_invoiced_cost += (po.amount_total * rate) if po.state not in ['draft', 'cancel'] else 0.00
+                            total_paid_cost += (po.amount_total * rate) if po.invoice_status in ['invoiced'] else 0.00
+                            total_po_to_be_invoiced += float(po.amount_total * rate) if po.invoice_status not in ['invoiced'] else 0.00
+                        else:
+                            raise ValidationError('You must ensure that both currencies (NGN, USD) has at least an update rate ids')
+                    else: # value to display is in naira
+                        total_cost += po.amount_total
+                        total_invoiced_cost += po.amount_total if po.state not in ['draft', 'cancel'] else 0.00
+                        total_paid_cost += po.amount_total if po.invoice_status in ['invoiced'] else 0.00
+                        total_po_to_be_invoiced += float(po.amount_total) if po.invoice_status not in ['invoiced'] else 0.00
+                else: 
+                    # Convert all to USD value
+                    if currency_id.name in ['NGN', 'Naira', False] or currency_id.currency_unit_label == 'Naira':
+                        # set the company rate. ie compute from naira to USD
+                        # filter the currency rate as at that time, if not found, used the current rate
+                        # e.g 22 sep < 24 sep > 26 sept
+                        currency_usd_id = self.env.ref('base.USD')
+                        usd_rate = currency_usd_id.mapped('rate_ids')
+                        
+                        currency_rate = usd_rate.filtered(
+                            lambda cr: two_date_before.date() < cr.name and two_date_after.date() > cr.name
+                            )
+                        # currency_rate_alternative = currency_id.rate_ids
+                        if currency_rate.ids:
+                            rate = currency_rate[0].inverse_company_rate or usd_rate[0].inverse_company_rate
+                            # total += po.amount_total / rate
+                            total_cost += float(po.amount_total / rate)
+                            total_invoiced_cost += (po.amount_total / rate) if po.state not in ['draft', 'cancel'] else 0.00
+                            total_paid_cost += po.amount_total / rate if po.invoice_status in ['invoiced'] else 0.00
+                            total_po_to_be_invoiced += float(po.amount_total / rate) if po.invoice_status not in ['invoiced'] else 0.00
+                            # ie. 50000 * 1600
+                        elif usd_rate:
+                            rate = usd_rate[0].inverse_company_rate
+                            total_cost += float(po.amount_total / rate)
+                            total_invoiced_cost += (po.amount_total / rate) if po.state not in ['draft', 'cancel'] else 0.00
+                            total_paid_cost += (po.amount_total / rate) if po.invoice_status in ['invoiced'] else 0.00
+                            total_po_to_be_invoiced += float(po.amount_total / rate) if po.invoice_status not in ['invoiced'] else 0.00
+                        else:
+                            raise ValidationError('You must ensure that both currencies (NGN, USD) has at least an update rate ids')
+                    else: # value to display is in USD
+                        total_cost += po.amount_total
+                        total_invoiced_cost += po.amount_total if po.state not in ['draft', 'cancel'] else 0.00
+                        total_paid_cost += po.amount_total if po.invoice_status in ['invoiced'] else 0.00
+                        total_po_to_be_invoiced += float(po.amount_total) if po.invoice_status not in ['invoiced'] else 0.00
+        _logger.info(f'TOTAL NOT INVOICED==> {total_po_to_be_invoiced}')
+        return round(total_cost), round(total_invoiced_cost), round(total_paid_cost), round(total_po_to_be_invoiced, 2)
+    
+    @api.depends('memo_setting_id')
+    def compute_task_info(self):
+        for rec in self:
+            if rec.attachment_ids:
+                rec.attachment_ids.write({'res_model': rec._name, 'res_id': rec.id})
+            rec.amountfig = sum([amt.amount_total for amt in rec.invoice_ids])
             if rec.memo_setting_id: 
                 all_todo_ids = rec.memo_setting_id.sudo().mapped('stage_ids')
                 all_invoices, all_documents = 0, 0
@@ -474,19 +1269,6 @@ class Memo_Model(models.Model):
                 all_active_sub_stage_ids = self.memo_sub_stage_ids
                 all_active_invoice = rec.sudo().mapped('invoice_ids')
                 all_active_document =rec.sudo().mapped('attachment_ids')
-                # paid_expense = sum([inv.amount_total for inv in all_active_invoice.filtered(lambda iv: iv.move_type in ["in_invoice", "out_receipt"])])
-                # revenue = sum([inv.amount_total for inv in all_active_invoice.filtered(lambda iv: iv.move_type in ["out_invoice", "out_receipt"])])
-                customer_invoice = self.env['account.move'].sudo().search([
-                    ('memo_id', '=', rec.id),  ('move_type', 'in', ["out_invoice", "out_receipt"]), 
-                ])
-                po = self.env['account.move'].sudo().search([
-                    ('memo_id', '=', rec.id),  ('move_type', 'in', ["in_invoice", "out_receipt"]), 
-                ])
-                paid_expense = sum([cs.amount_total for cs in po])
-                realized_income = sum([cs.amount_total for cs in customer_invoice]) - paid_expense
-                revenue = sum([cs.amount_total for cs in customer_invoice])
-
-                # raise ValidationError(realized_income)
                 for stage in all_todo_ids:
                     all_documents += len(stage.required_document_line.ids)
                     all_invoices += len(stage.required_invoice_line.ids)
@@ -516,30 +1298,126 @@ class Memo_Model(models.Model):
                     sub_stage_done_invoice + 
                     sub_stage_done_doc
                     ]) # get all the current stage --> documents to update, invoices to process, sub stages invoices and documents to process
+                total_sum_task = todos + active + done
+                rec.write({
+                    'task_todo': todos,
+                    'task_active': active,
+                    'task_done': done, 
+                    # 'task_todo_percentage': todos * 100  / total_sum_task,
+                    # 'task_active_percentage': active * 100  / total_sum_task,
+                    # 'task_done_percentage': done * 100  / total_sum_task,
+                }) 
+            else:
+                rec.write({
+                    'task_todo': False,
+                    'task_active': False,
+                    'task_done': False, 
+                    # 'task_todo_percentage': 0,
+                    # 'task_active_percentage': 0,
+                    # 'task_done_percentage': 0,
+                })
+        
+    @api.depends('name')
+    def _compute_task_info(self):
+        for rec in self: # 1000000
+            if rec.memo_setting_id: 
+                all_todo_ids = rec.memo_setting_id.sudo().mapped('stage_ids')
+                all_invoices, all_documents = 0, 0
+                all_todo_sub_invoices, all_todo_sub_documents = 0, 0
+                revenue, paid_expense, realized_income =0, 0, 0
+                all_active_sub_stage_ids = self.memo_sub_stage_ids
+                all_active_invoice = rec.sudo().mapped('invoice_ids').filtered(lambda s: s.payment_state not in ['paid', 'in_payment'])
+                all_active_document =rec.sudo().mapped('attachment_ids').filtered(lambda s: not s.is_locked) 
+                for stage in all_todo_ids:
+                    all_documents += len(stage.required_document_line.ids)
+                    all_invoices += len(stage.required_invoice_line.ids)
+                    for sub_stage in stage.sub_stage_ids:
+                        all_todo_sub_documents += len(sub_stage.required_document_line.ids)
+                        all_todo_sub_invoices += len(sub_stage.required_invoice_line.ids)
+                sub_stage_doc, sub_stage_invoice = 0, 0
+                for acsub in all_active_sub_stage_ids:
+                    sub_stage_doc += len(acsub.mapped('attachment_ids').filtered(lambda s: not s.is_locked).ids)
+                    sub_stage_invoice += len(acsub.mapped('invoice_ids').filtered(lambda s: s.payment_state not in ['paid', 'in_payment']).ids)
+                
+                sub_stage_done_doc = 0
+                sub_stage_done_invoice = 0
+                for sub_active in self.memo_sub_stage_ids:
+                    # checks the done attachment and invoices
+                    if sub_active.attachment_ids:
+                        sub_stage_done_doc += len(sub_active.mapped('attachment_ids').filtered(lambda s: s.is_locked).ids)
+                    if sub_active.invoice_ids:
+                        sub_stage_done_invoice += len(sub_active.mapped('invoice_ids').filtered(lambda s: s.payment_state in ['paid', 'in_payment']))
+                    sub_stage_doc += len(sub_active.mapped('attachment_ids').filtered(lambda s: not s.is_locked).ids)
+                    sub_stage_invoice += len(sub_active.mapped('invoice_ids').filtered(lambda s: s.payment_state not in ['paid', 'in_payment']).ids)
+
+                todos = sum([all_invoices, all_documents , sub_stage_doc, sub_stage_invoice]) # get all the stages --> documents to update(not attached), invoices to process(not attached), sub process documents(not attached)
+                active = sum([len(all_active_document.ids), len(all_active_invoice.ids), sub_stage_doc + sub_stage_invoice])  # get all the current stage --> documents to update, invoices to process, sub stages invoices and documents to process
+                done = sum([
+                    len(all_active_invoice.filtered(lambda ad: ad.payment_state in ['paid', 'in_payment'])), 
+                    len(all_active_document.filtered(lambda ad: ad.is_locked)), 
+                    sub_stage_done_invoice + 
+                    sub_stage_done_doc
+                    ]) # get all the current stage --> documents to update, invoices to process, sub stages invoices and documents to process
                 rec.write({
                     'task_todo': todos,
                     'task_active': active,
                     'task_done': done,
-                    'expected_revenue': revenue,
-                    'realized_income': realized_income,
-                    'paid_expense': paid_expense,
+                    # 'expected_revenue': revenue,
+                    # 'realized_income': realized_income,
+                    # 'paid_expense': paid_expense,
                 }) 
             else:
                 rec.write({
                     'task_todo': False,
                     'task_active': False,
                     'task_done': False,
-                    'expected_revenue': False,
-                    'realized_income': False,
-                    'paid_expense': False,
+                    # 'expected_revenue': False,
+                    # 'realized_income': False,
+                    # 'paid_expense': False,
                 })
+    
+    def write(self, vals):
+        
+        old_length = len(self.users_followers)
+        if self.attachment_ids:
+            self.attachment_ids.write({'res_model': self._name, 'res_id': self.id})
+        
+        res = super(Memo_Model, self).write(vals)
+        if 'users_followers' in vals:
+            if len(self.users_followers) < old_length:
+                raise ValidationError("Sorry you cannot remove followers")
+        return res
 
     @api.constrains('document_folder')
     def check_next_reoccurance_constraint(self):
         if self.document_folder and self.document_folder.next_reoccurance_date:
             if fields.Date.today() < self.document_folder.next_reoccurance_date:
                 raise ValidationError(f'You cannot submit this document because the todays date is lesser than the reoccurence date {self.document_folder.next_reoccurance_date}')
+     
+    @api.constrains('project_memo_id')
+    def check_project_memo_id_constraint(self):
+        if self.id == self.project_memo_id.id:
+            raise ValidationError("Sorry !!! you cannot set parent project with same file")
+      
+    set_all_po = fields.Boolean('Remove all record')
     
+    def update_file_po(self):
+        '''go to po lines, if memoid has code? remove else leave'''
+        memos = self
+        if self.set_all_po:
+            memos = self.env['memo.model'].search([])
+        for m in memos:
+            records_to_unlink = []
+            # if m.po_ids:
+            for po in m.po_ids:
+                # check if the po.memo_id have a code, unlink because it's a sub process/file PO
+                # if po.memo_id.code:
+                #     records_to_unlink.append(po.id)
+                if po.memo_id.project_memo_id.id != m.id:
+                    records_to_unlink.append(po.id)
+            # raise ValidationError(records_to_unlink)
+            m.po_ids = [(3, r) for r in records_to_unlink]               
+                    
     def send_memo_to_contacts(self):
         if not self.partner_ids:
             raise ValidationError('No partner is select, check to ensure your memo option is in "All or Selected"')
@@ -561,9 +1439,7 @@ class Memo_Model(models.Model):
                 },
             } 
     # MEMO THINGS 
-    
     ################################
-
     def _get_related_stage(self):
         if self.memo_type:
             domain = [
@@ -572,13 +1448,8 @@ class Memo_Model(models.Model):
                 ]
         else:
             domain=[('id', '=', 0)]
-        return domain
+        return domain 
     
-    @api.onchange('invoice_ids')
-    def get_amount(self):
-        if self.invoice_ids:
-            self.amountfig = sum([rec.amount_total for rec in self.invoice_ids])
-
     @api.onchange('payment_ids')
     def get_payment_amount(self):
         if self.payment_ids:
@@ -588,29 +1459,27 @@ class Memo_Model(models.Model):
     def get_default_stage_id(self):
         """ Gives default stage_id """
         if self.memo_type:
+            self.attachment_ids.unlink()
             if not self.employee_id.department_id:
                 raise ValidationError("Contact Admin !!!  Employee must be linked to a department")
             if not self.res_users:
                 department_id = self.employee_id.department_id
                 ms = self.env['memo.config'].sudo().search([
                     ('memo_type', '=', self.memo_type.id),
-                    ('department_id', '=', department_id.id)
+                    # ('department_id', '=', department_id.id)
                     ], limit=1)
-                if ms:
-                    code = self.env["ir.sequence"].next_by_code("memo.model") or "/" if not self.code else self.code
+                
+                if ms.stage_ids:
                     memo_setting_stage = ms.stage_ids[0]
                     self.stage_id = memo_setting_stage.id if memo_setting_stage else False
                     self.memo_setting_id = ms.id
+                    self.update_validity_set(self.stage_id) 
                     self.memo_type_key = self.memo_type.memo_key 
-                    self.code = code
                     self.has_sub_stage = True if memo_setting_stage.sub_stage_ids else False
-                    # self.res_users = [
-                    #     (4, self.employee_id.administrative_supervisor_id.user_id.id),
-                    #     ]
                     self.users_followers = [
                         (4, self.employee_id.administrative_supervisor_id.id),
                         ]
-                    invoices, documents = self.generate_required_artifacts(self.stage_id, self, code)
+                    invoices, documents = self.generate_required_artifacts(self.stage_id, self, '')
                     self.sudo().write({
                         'invoice_ids': [(4, iv) for iv in invoices],
                         'attachment_ids': [(4, dc) for dc in documents]
@@ -621,14 +1490,8 @@ class Memo_Model(models.Model):
                     self.stage_id = False
                     self.memo_setting_id = False
                     self.memo_type_key = False
-                    self.code = False
-                    self.has_sub_stage = False
-                    msg = f"No stage configured for department {department_id.name} and selected memo type. Please contact administrator"
-                    return {'warning': {
-                                'title': "Validation",
-                                'message':msg,
-                            }
-                    }
+                    # self.code = False
+                    self.has_sub_stage = False 
         else:
             self.stage_id = False
 
@@ -640,11 +1503,12 @@ class Memo_Model(models.Model):
                 })
         if sub_stage_ids:
             for stg in sub_stage_ids:
-                # raise ValidationError(stg.name)
                 sub_stage = self.env['memo.sub.stage'].sudo().create({
                     'name': stg.name,
                     'memo_id': self.id,
                     'sub_stage_id': stg.id,
+                    'approver_ids': stg.approver_ids.ids,
+                    'description': stg.description,
                 })
                 invoices, documents = self.generate_required_artifacts(stg, sub_stage, '')
                 sub_stage.sudo().write({
@@ -657,88 +1521,40 @@ class Memo_Model(models.Model):
                 })
 
     def generate_required_artifacts(self, stage_id, obj, code=''):
-        # raise ValidationError(code)
         """This generate invoice lines from the configure stage"""
         stage_invoice_line = stage_id.mapped('required_invoice_line')
         stage_document_line = stage_id.mapped('required_document_line')
-        invoices,documents= [], []
+        invoices, documents= [], []
         if stage_invoice_line:
             if not self.client_id:
                 raise ValidationError("Client / Partner must be selected before invoice validation")
             for stage_inv in stage_invoice_line:
                 already_existing_stage_invoice_line = obj.mapped('invoice_ids').filtered(
-                    lambda exist: exist.stage_invoice_name == stage_inv.name)
+                    lambda exist: exist.stage_invoice_name == stage_inv.name and exist.state not in ['posted'])
                 if not already_existing_stage_invoice_line:
                     movetype = 'in_invoice' if stage_inv.move_type == 'vendor' else 'out_invoice'
                     invid = self.function_generate_move_entries(
-                        invoice_name = stage_inv.name, invoice_required=stage_inv.compulsory, code=code, movetype=movetype)
+                        invoice_name = f"{stage_inv.name}/{self.id}/{self.stage_id.id}", invoice_required=stage_inv.compulsory, code=code, movetype=movetype)
+                    
                     invoices.append(invid.id)
-            # return invoices
-            # self.sudo().write({
-            #     'invoice_ids': [(4, iv) for iv in invoices]
-            #     })
+
         if stage_document_line:
             for stage_doc in stage_document_line:
                 already_existing_stage_document_line = obj.mapped('attachment_ids').filtered(
                     lambda exist: exist.stage_document_name == stage_doc.name)
                 if not already_existing_stage_document_line:
                     doc_name = f"EXP-P/{stage_doc.name}/{code}"
+                    # ref = str(self.id)[] if str(self.id).startswith('NewId') else self.id
                     docid = self.function_generate_attachment(
                         attachment_name=stage_doc.name, 
                         report_binary = False, 
                         mimetype = False,
-                        document_name = stage_doc.name, 
+                        document_name = f"{stage_doc.name}-{self.id}-{stage_id.id}", 
                         compulsory=stage_doc.compulsory,
                         code=code
                         )
-                    documents.append(docid.id)
-            # self.sudo().write({
-            #     'attachment_ids': [(4, dc) for dc in documents]
-            #     })
+                    documents.append(docid.id) 
         return invoices, documents, 
-
-    # def generate_required_artifacts(self, stage_id, obj, code=''):
-    #     # raise ValidationError(code)
-    #     """This generate invoice lines from the configure stage"""
-    #     stage_invoice_line = stage_id.mapped('required_invoice_line')
-    #     stage_document_line = stage_id.mapped('required_document_line')
-    #     invoices,documents= [], []
-    #     if stage_invoice_line:
-    #         if not self.client_id:
-    #             raise ValidationError("Client / Partner must be selected before invoice validation")
-    #         for stage_inv in stage_invoice_line:
-    #             already_existing_stage_invoice_line = obj.mapped('invoice_ids').filtered(
-    #                 lambda exist: exist.stage_invoice_name == stage_inv.name)
-    #             if not already_existing_stage_invoice_line:
-    #                 movetype = 'in_invoice' if stage_inv.move_type == 'vendor' else 'out_invoice'
-    #                 invid = self.function_generate_move_entries(
-    #                     invoice_name = stage_inv.name, invoice_required=stage_inv.compulsory, code=code, movetype=movetype)
-    #                 invoices.append(invid.id)
-    #         return invoices
-    #         # self.sudo().write({
-    #         #     'invoice_ids': [(4, iv) for iv in invoices]
-    #         #     })
-    #     if stage_document_line:
-    #         for stage_doc in stage_document_line:
-    #             already_existing_stage_document_line = obj.mapped('attachment_ids').filtered(
-    #                 lambda exist: exist.stage_document_name == stage_doc.name)
-    #             if not already_existing_stage_document_line:
-    #                 doc_name = f"EXP-P/{stage_doc.name}/{code}"
-    #                 docid = self.function_generate_attachment(
-    #                     attachment_name=stage_doc.name, 
-    #                     report_binary = False, 
-    #                     mimetype = False,
-    #                     document_name = stage_doc.name, 
-    #                     compulsory=stage_doc.compulsory,
-    #                     code=code
-    #                     )
-    #                 documents.append(docid.id)
-    #         # self.sudo().write({
-    #         #     'attachment_ids': [(4, dc) for dc in documents]
-    #         #     })
-    #     return invoices, documents, 
-
-            
 
     def function_generate_attachment(self, **kwargs):
         attachment_name, report_binary, mimetype,document_name, compulsory = kwargs.get('attachment_name'),\
@@ -759,12 +1575,11 @@ class Memo_Model(models.Model):
                 'stage_document_name': document_name,
                 'stage_document_required': compulsory,
                 'code': code,
+                'memo_id': self.id,
             })
         return attachid
     
     def function_generate_move_entries(self, **kwargs):
-        # is_config_approver = self.determine_if_user_is_config_approver()
-        # if is_config_approver:
         """Check if the user is enlisted as the approver for memo type
         if approver is an account officer, system generates move and open the exact record"""
         # purchase payment journal
@@ -773,9 +1588,6 @@ class Memo_Model(models.Model):
         [('type', '=', 'purchase'),
             ('code', '=', 'BILL')
             ], limit=1)
-        
-         # sale payment journal
-        
         sale_journal_id = self.env['account.journal'].search(
         [('type', '=', 'sale'), ('code', '=', 'INV')], limit=1)
         journal_id = purchase_journal_id if movetype == 'in_invoice' else sale_journal_id
@@ -786,16 +1598,28 @@ class Memo_Model(models.Model):
         invoice_name = kwargs.get('invoice_name') or "-"
         invoice_required = kwargs.get('invoice_required')
         account_move = self.env['account.move'].sudo()
-
         # Please be careful not to remove this name below, 
-        name = f"EXP-P/{invoice_name}/{kwargs.get('code')}"
+        # name = f"EXP-P/{invoice_name}/{kwargs.get('code')}"
+        prefix = 'P000001' if movetype == 'in_invoice' else 'S000001'
+        suffix = '100' if self.memo_type_key in ['import_process', 'export_process'] else '200'
+        domain = ('move_type', '=', 'in_invoice') if movetype == 'in_invoice' else ('move_type', '=', 'out_invoice')
+        last_invoice = self.env['account.move'].search(
+            [('name', 'ilike', prefix), domain], 
+            order="create_date desc", 
+            limit=1
+            )
+        
+        if last_invoice:
+            lastinv = last_invoice.name.split('-')
+            suffix = int(lastinv[1]) + 1 if len(lastinv) > 1 else suffix
+        prefix_code = f"{prefix}-{suffix}" 
+        name = prefix_code
         inv = account_move.search([('name', '=', name)], limit=1) # recasting this means you must recast this line above
         if not inv:
             partner_id = self.client_id
-            # self.employee_id.user_id.partner_id or self.env.user.company_id.partner_id
             inv = account_move.create({ 
                 'memo_id': self.id,
-                'ref': name,
+                'ref': name, #f'{prefix_code}-{self.code}',
                 'origin': self.code,
                 'partner_id': partner_id.id,
                 'company_id': self.env.user.company_id.id,
@@ -815,7 +1639,6 @@ class Memo_Model(models.Model):
     def compute_user_is_approver(self):
         for rec in self:
             if rec.stage_id.is_approved_stage and self.env.user.id in [r.user_id.id for r in rec.stage_id.approver_ids]: 
-                # self.env.uid in [r.user_id.id for r in self.stage_id.approver_ids]
                 rec.user_is_approver = True
                 rec.users_followers = [(4, self.env.user.employee_id.id)]
             else:
@@ -846,37 +1669,38 @@ class Memo_Model(models.Model):
 
     @api.depends('set_staff')
     def get_user_staff(self):
-        if self.set_staff:
-            self.demo_staff = self.set_staff.user_id.id
-        else:
-            self.demo_staff = False
+        for rec in self:
+            if rec.set_staff:
+                rec.demo_staff = rec.set_staff.user_id.id
+            else:
+                rec.demo_staff = False
     
     # get the employee's department
     @api.depends('employee_id')
     def employee_department(self):
         if self.employee_id:
             self.dept_ids = self.employee_id.department_id.id
-            # self.district_id = self.employee_id.ps_district_id.id
         else:
             self.dept_ids = False
-            # self.district_id = self.employee_id.ps_district_id.id
     
     @api.depends('employee_id')
     def compute_employee_supervisor(self):
-        if self.employee_id:
-            current_user = self.env.user
-            if current_user.id == self.employee_id.administrative_supervisor_id.user_id.id:
-                self.is_supervior = True
-            else:
-                self.is_supervior = False
+        for rec in self:
             
-            if current_user.id == self.employee_id.parent_id.user_id.id:
-                self.is_manager = True
+            if rec.employee_id:
+                current_user = rec.env.user
+                if current_user.id == rec.employee_id.administrative_supervisor_id.user_id.id:
+                    rec.is_supervior = True
+                else:
+                    rec.is_supervior = False
+                
+                if current_user.id == rec.employee_id.parent_id.user_id.id:
+                    rec.is_manager = True
+                else:
+                    rec.is_manager = False
             else:
-                self.is_manager = False
-        else:
-            self.is_supervior = False
-            self.is_manager = False 
+                rec.is_supervior = False
+                rec.is_manager = False 
 
     def print_memo(self):
         report = self.env["ir.actions.report"].search(
@@ -884,7 +1708,17 @@ class Memo_Model(models.Model):
         if report:
             report.write({'report_type': 'qweb-pdf'})
         return self.env.ref('company_memo.print_memo_model_report').report_action(self)
-     
+    
+    def print_work_instruction(self):
+
+        self.work_order_code = self.env['ir.sequence'].next_by_code('work-instruction')
+        self.qr_code()
+        report = self.env["ir.actions.report"].search(
+            [('report_name', '=', 'company_memo.work_instruction_print_report_template')], limit=1)
+        if report:
+            report.write({'report_type': 'qweb-pdf'})
+        return self.env.ref('company_memo.print_work_instruction_report').report_action(self)
+    
     def set_draft(self):
         if self.env.uid != self.employee_id.user_id.id:
             raise ValidationError(
@@ -927,15 +1761,11 @@ class Memo_Model(models.Model):
                 'set_staff': False,
                 })
 
-    # def get_url(self, id, name):
-    #     base_url = http.request.env['ir.config_parameter'].sudo().get_param('web.base.url')
-    #     base_url += '/web#id=%d&view_type=form&model=%s' % (id, name)
-    #     return "<a href={}> </b>Click<a/>. ".format(base_url)
-
     def get_url(self, id):
         base_url = http.request.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        base_url += "/my/request/view/%s" % (id)
-        return "<a href={}> </b>Click<a/>. ".format(base_url)
+        internal_path = "/web#id={}&model=memo.model&view_type=form".format(id)
+        internal_url = base_url + internal_path
+        return "<a href='{}'>Click</a>".format(internal_url)
     
     """line 4 - 7 checks if the current user is the initiator of the memo, 
     if true, raises warning error else: it opens the wizard"""
@@ -948,24 +1778,6 @@ class Memo_Model(models.Model):
             raise ValidationError(
                 """Sorry you are not allowed to reject /  return you own initiated memo"""
                 )
-    # def determine_user_role(self):
-    #     '''Checks if the  user is employee/administration 
-    #     / Memo manager / memo gm/ memo auditor / memo account
-    #     returns true to be used to set the To field in wizard to the person's manager'''
-    #     user_id = self.env['res.users'].browse([self.env.uid])
-    #     sys_admin = user_id.has_group("base.group_system")
-    #     hr_admin = user_id.has_group("hr.group_hr_manager")
-    #     memo_manager = user_id.has_group("company_memo.mainmemo_manager")
-    #     memo_audit = user_id.has_group("company_memo.mainmemo_audit")
-    #     memo_account = user_id.has_group("company_memo.mainmemo_account")
-    #     if any([sys_admin, hr_admin, memo_audit, memo_manager, memo_account]):
-    #         return False 
-    #     else:
-    #         if not self.employee_id.parent_id:
-    #             raise ValidationError(
-    #                 'Please ensure you have a unit manager / head manager assigned to your record !'
-    #                 )
-    #         return True
         
     def validate_memo_for_approval(self):
         item_lines = self.mapped('product_ids')
@@ -987,13 +1799,55 @@ class Memo_Model(models.Model):
                 )
         if attachments:
             for count, doc in enumerate(attachments, 1):
+                isn = doc.name.split('/')
+                doc_name = isn[0] if isn else '-'
                 matching_attachment = self.stage_id.mapped('required_document_line').filtered(
-                    lambda dc: dc.name == doc.name
+                    lambda dc: dc.name == doc_name
                 )
                 matching_stage_doc = matching_attachment and matching_attachment[0]
                 if matching_stage_doc.compulsory and not doc.datas:
-                    raise ValidationError(f"Attachment with name '{doc.stage_document_name}' at line {count} does not have any data attached")
+                    document_name = doc.stage_document_name.replace('New', ' REF NO:')
+                    raise ValidationError(f"""Attachment with name '{document_name}' at line {count} does not have any data attached
+                        """
+                        )
 
+    def validate_waybill_details(self):
+        if self.memo_setting_id.project_type == 'transport' or self.memo_type_key == "transport":
+            '''Check if the stage requires waybill details validation'''
+            if self.stage_id.require_waybill_detail: 
+                details_required = []
+                if not self.truck_company_name:
+                    details_required.append('Truck company Name')
+                if not self.truck_reg:
+                    details_required.append('Truck Registration No')
+                if not self.truck_driver:
+                    details_required.append('Truck driver')
+                if not self.truck_driver_phone:
+                    details_required.append('Driver phone')
+                if not self.waybill_note:
+                    details_required.append('Waybill Note')
+                if not self.truck_type:
+                    details_required.append('Truck type')
+                if not self.waybill_from:
+                    details_required.append('Waybill From')
+                if not self.waybill_to:
+                    details_required.append('Waybill To')
+                if not self.waybill_date:
+                    details_required.append('Waybill Date')
+                if not self.waybill_expected_arrival_date:
+                    details_required.append('Expected Arrival')
+                if not self.waybill_ids:
+                    details_required.append('Waybill items')
+                if details_required:
+                    raise ValidationError(f"{','.join(details_required)} fields must be provided")
+                
+    def validate_po_line(self):
+        '''if the stage requires PO confirmation'''
+        self.procurement_confirmation()
+
+    def validate_so_line(self):
+        self.sale_order_confirmation()
+ 
     def validate_invoice_line(self):
         '''Check all invoice in draft and check if 
         the current stage that matches it is compulsory
@@ -1002,17 +1856,17 @@ class Memo_Model(models.Model):
         invoice_ids = self.mapped('invoice_ids').filtered(
                     lambda iv: iv.state in ['draft']
                 )
-        # if self.memo_type.memo_key == "Payment" and invoice_ids:
         if invoice_ids:
             for count, inv in enumerate(invoice_ids, 1):
+                isn = inv.stage_invoice_name.split('/') if inv.stage_invoice_name else False
+                inv_stage_name = isn[0] if isn else '-'
                 matching_stage_invoice = self.stage_id.mapped('required_invoice_line').filtered(
-                    lambda rinv: rinv.name == inv.stage_invoice_name
+                    lambda rinv: rinv.name == inv_stage_name
                 )
                 matching_stage_invoice = matching_stage_invoice and matching_stage_invoice[0]
                 if matching_stage_invoice.compulsory:
                     if inv.payment_state not in ['paid', 'partial', 'in_payment']:
                         raise ValidationError(f"Invoice at line {count} must be posted and paid before proceeding")
-
                     invoice_line = inv.mapped('invoice_line_ids')
                     if not invoice_line:
                         raise ValidationError(f"Add at least one invoice billing line at line {count}")
@@ -1021,20 +1875,7 @@ class Memo_Model(models.Model):
                         )
                     if invoice_line_without_price:
                         raise ValidationError(f"All invoice line must have a price amount greater than 0 at line {count}")
-                # else:
-                #     self.invoice_ids = [(3, inv.id)]
 
-    def validate_governor_attachement(self):
-        '''Ensures an attachment is added before submission'''
-        if self.is_internal_transfer:
-            attachment_data = self.env['ir.attachment'].sudo().read_group([
-                ('res_model', '=', 'memo.model'), 
-                ('res_id', 'in', self.ids)], ['res_id'], ['res_id'])
-            attachment = dict((data['res_id'], data['res_id_count']) for data in attachment_data)
-            attachments = attachment.get(self.id, 0)
-            if attachments < 1: # ensure at least one attachment is found
-                raise ValidationError("Please ensure at least one document is attached")
-    
     def validate_payment_line(self):
         '''Ensures a payment line is added if is_internal transfer'''
         if self.is_internal_transfer and not self.payment_ids:
@@ -1045,15 +1886,25 @@ class Memo_Model(models.Model):
             if not rec.sub_stage_done:
                 raise ValidationError(f"""There are unfinished sub task at line {count} that requires completion before moving to the next stage""")
     
+    def validate_other_validity(self):
+        if self.stage_id.enabled_date_validity_config and not self.enabled_date_validity:
+            raise ValidationError("Please kindly ensure date validity is set")
+        if self.stage_id.enabled_date_procured_config and not self.enabled_date_procured:
+            raise ValidationError("Please kindly ensure date procured is set")
+        if self.stage_id.enable_procurment_amount_config and not self.enable_procurment_amount:
+            raise ValidationError("Please kindly ensure procurement amount is added")
+        if self.stage_id.enabled_date_paid_config and not self.enabled_date_paid:
+            raise ValidationError("Please kindly ensure date paid is added")
+            
     def forward_memo(self):
+        self.validate_waybill_details()
+        self.validate_po_line()
+        self.validate_so_line()
         self.validate_invoice_line()
         self.validate_compulsory_document()
-        self.validate_governor_attachement()
         self.validate_payment_line()
         self.validate_sub_stage()
-        # if self.state == "submit":
-        #     if not self.env.user.id == self.employee_id.user_id.id:#  or self.env.uid != self.create_uid:
-        #         raise ValidationError('You cannot forward a memo at draft state because you are not the initiator')
+        self.validate_other_validity()
         user_exist = self.mapped('res_users').filtered(
             lambda user: user.id == self.env.uid
             )
@@ -1061,7 +1912,10 @@ class Memo_Model(models.Model):
             raise ValidationError(
                 """You cannot forward this memo again unless returned / cancelled!!!"""
                 )
-        
+        if self.memo_project_type in ['project_pro'] and not self.po_ids.ids:
+            raise ValidationError(
+                """You cannot forward this memo without Purchase lines added"""
+                )
         if self.document_folder and not self.env['ir.attachment'].sudo().search([
                 ('res_id', '=', self.id), 
                 ('res_model', '=', self._name)
@@ -1069,17 +1923,17 @@ class Memo_Model(models.Model):
             raise ValidationError(
                 """Please attach at least one document"""
                 )
+        if self.to_unfreezed_budget and not self.po_ids:
+            raise ValidationError("Please add PO and Provide reasons for Additional PO approval")
         
-        if self.memo_type.memo_key == "Payment" and self.amountfig <= 0:
-            raise ValidationError("Payment amount must be greater than 0.0")
+        if self.memo_type.memo_key == "Payment":
+            if self.payment_ids or self.invoice_ids:# self.amountfig <= 0:
+                pass 
+            else:
+                raise ValidationError("Please add invoice or payment lines")
         elif self.memo_type.memo_key == "material_request" and not self.product_ids:
             raise ValidationError("Please add request line") 
         view_id = self.env.ref('company_memo.memo_model_forward_wizard')
-        # is_officer = self.determine_user_role() # returns true or false 
-
-        # approver_ids, next_stage_id = self.get_next_stage_artifact(self.stage_id, False)
-        # next_stage_record = self.env['memo.stage'].browse([next_stage_id])
-        # condition_stages = [next_stage_record.yes_conditional_stage_id.id, next_stage_record.no_conditional_stage_id.id] or []
         condition_stages = [self.stage_id.yes_conditional_stage_id.id, self.stage_id.no_conditional_stage_id.id] or []
         return {
                 'name': 'Forward Memo',
@@ -1094,7 +1948,6 @@ class Memo_Model(models.Model):
                     'default_resp': self.env.uid,
                     'default_dummy_conditional_stage_ids': [(6, 0, condition_stages)],
                     'default_has_conditional_stage': True if self.stage_id.memo_has_condition else False,
-                    # 'default_is_officer': is_officer,
                 },
             }
 
@@ -1120,17 +1973,9 @@ class Memo_Model(models.Model):
             ('memo_type', '=', self.memo_type.id),
             ('department_id', '=', self.employee_id.department_id.id)
             ], limit=1)
-        memo_setting_stages = memo_settings.stage_ids
-        # if not from_website and memo_setting_stages.index(current_stage_id.id) == 0:
-        #     """Checks if the first index of the stages is the initial stage;
-        #     Adds the employee manager or supervisor at the first stage
-        #     """ 
-        #     approver_ids += [
-        #         self.employee_id.parent_id.id,
-        #         self.employee_id.administrative_supervisor_id.id
-        #     ]
-        # _logger.info(f'Found memo_settings are {memo_settings} and stages {memo_settings.stage_ids} and current stage {current_stage_id}')
-        
+        memo_setting_stages = memo_settings.mapped('stage_ids').filtered(
+            lambda skp: skp.id != self.stage_to_skip.id
+        )
         if memo_settings and current_stage_id:
             mstages = memo_settings.stage_ids # [3,6,8,9]
             _logger.info(f'Found stages are {memo_setting_stages.ids}')
@@ -1149,22 +1994,21 @@ class Memo_Model(models.Model):
                 "Please ensure to configure the Memo type for the employee department"
                 )
     
-    def update_final_state_and_approver(self, from_website=False, default_stage=False):
+    def update_final_state_and_approver(self, from_website=False, default_stage=False, assigned_to=False):
         if from_website:
-            # if from website args: prevents the update of stages and approvers 
             pass
         else:
             # updating the next stage
             approver_ids = self.get_next_stage_artifact(self.stage_id)[0] 
             next_stage_id= default_stage or self.get_next_stage_artifact(self.stage_id)[1] 
             self.stage_id = next_stage_id
+            self.freeze_po_budget = self.stage_id.freeze_po_budget
             invoices, documents = self.generate_required_artifacts(self.stage_id, self, self.code)
             self.sudo().write({
                 'invoice_ids': [(4, iv) for iv in invoices],
                 'attachment_ids': [(4, dc) for dc in documents]
                 })
             self.generate_sub_stage_artifacts(self.stage_id)
-            # self.generate_required_artifacts(self.stage_id, self.code)
             # determining the stage to update the already existing state used to hide or display some components
             if self.stage_id:
                 if self.stage_id.is_approved_stage:
@@ -1176,7 +2020,7 @@ class Memo_Model(models.Model):
                 if self.sudo().stage_id.approver_ids:
                     self.sudo().update({
                         'users_followers': [(4, appr.id) for appr in self.sudo().stage_id.approver_ids],
-                        'set_staff': self.sudo().stage_id.approver_ids[0].id # FIXME To be reviewed
+                        'set_staff': assigned_to.id if assigned_to else self.sudo().stage_id.approver_ids[0].id # FIXME To be reviewed
                         })
             if self.memo_setting_id and self.memo_setting_id.stage_ids:
                 ms = self.memo_setting_id.stage_ids
@@ -1186,7 +2030,8 @@ class Memo_Model(models.Model):
                 random_memo_approver_ids = [rec.id for rec in self.memo_setting_id.approver_ids if rec]
                 if last_stage.id == next_stage_id:
                     self.sudo().write({
-                            'state': 'Done'
+                            'state': 'Done',
+                            'closing_date': fields.Date.today(),
                             })
                     if last_stage.approver_ids or random_memo_approver_ids:
                         approver_ids = last_stage.approver_id.ids or random_memo_approver_ids
@@ -1194,7 +2039,8 @@ class Memo_Model(models.Model):
                             # 'approver_id': random.choice(approver_ids),
                             'approver_ids': [(4, appr) for appr in approver_ids],
                             })
-    
+            self.update_validity_set(self.stage_id)
+
     def lock_artifacts_from_modification(self):
         attachments = self.mapped('attachment_ids')
         invoices = self.mapped('invoice_ids')
@@ -1213,43 +2059,126 @@ class Memo_Model(models.Model):
 
                 for subinv in invoices:
                     subinv.is_locked = True
-
-        # def lock_artifacts(object):
-        #     object.update({'is_locked': True})
-        #     return True
-        # x = map(lock_artifacts, attachments)
-        # raise ValidationError(list(x))
-
+ 
     def confirm_memo(self, employee, comments, from_website=False, default_stage_id=False): 
         '''args => default_stage_id : stage_obj'''
-        # user_id = self.env['res.users'].search([('id','=',self.env.user.id)])
-        # lists2 = [y.partner_id.id for x in self.users_followers for y in x.user_id]
         type = "loan request" if self.memo_type.memo_key == "loan" else "memo"
         Beneficiary = self.employee_id.name or self.user_ids.name
-        body_msg = f"""Dear sir / Madam, \n \
-        <br/>I wish to notify you that a {type} with description, {self.name},<br/>  
+        body_msg = f"""Dear sir / Madam, \n <br/>
+        I wish to notify you that a {type} with description,\n {self.name},
         from {Beneficiary} (Department: {self.employee_id.department_id.name or "-"}) \
-        was sent to you for review / approval. <br/> <br/>Kindly {self.get_url(self.id)} \
-        <br/> Yours Faithfully<br/>{self.env.user.name}""" 
+        was sent to you for review / approval. \n <br/> Kindly {self.get_url(self.id)} \n <br/>
+         Yours Faithfully.{self.env.user.name}""" 
         self.direct_employee_id = False 
         self.lock_artifacts_from_modification() # first locks already generated artifacts to avoid further modification
         if default_stage_id:
             # first set the stage id and then update
             self.update_final_state_and_approver(from_website, default_stage_id)
         else:
-            self.update_final_state_and_approver(from_website)
+            self.update_final_state_and_approver(from_website, False, employee)
+        # update the po_memo_ids with child data
+        if self.to_unfreezed_budget and self.project_memo_id:
+            self.project_memo_id.po_memo_ids = [(4, self.id)]
+
         self.mail_sending_direct(body_msg)
         body = "%s for %s initiated by %s, moved by- ; %s and sent to %s" %(
             type,
             self.name,
             Beneficiary,
             self.env.user.name,
-            employee
+            employee.name
             )
         body_main = body + "\n with the comments: %s" %(comments)
         self.follower_messages(body_main)
-        self._compute_task_info()
+        self.compute_task_info()
+        # self.update_dashboard_finances()
 
+    def update_validity_set(self, stageObj =False):
+        
+        self.validity_set = True if stageObj and \
+            stageObj.enabled_date_paid_config or stageObj.enable_procurment_amount_config \
+                or stageObj.enabled_date_procured_config or stageObj.enabled_date_validity_config else False
+        # setting the stage start date
+        self.task_start_date = self.task_start_date if self.task_start_date else fields.Date.today()
+        stage_duration = stageObj.duration_config # default 20
+        self.task_end_date = fields.Date.today() + timedelta(days=stage_duration)
+        
+    def set_task_date(self):
+        for rec in self.env['memo.model'].search([]):
+            rec.update_validity_set(rec.stage_id)
+            
+    def update_project_type(self):
+        rec_ids = self.env.context.get('active_ids', [])
+        for rec in rec_ids:
+            record = self.env['memo.model'].browse([rec])
+            if not record.memo_project_type:
+                record.memo_project_type = record.memo_setting_id.project_type
+             
+    def procurement_confirmation(self):
+        if self.stage_id.require_po_confirmation:
+            if not self.po_ids:
+                raise ValidationError("Please enter purchase order lines")
+            else:
+                # i removed this because Timothy said So: 
+                pass 
+                
+                # po_without_lines = self.mapped('po_ids').filtered(
+                #     lambda tot: tot.amount_total < 1
+                # )
+                # if po_without_lines:
+                #     raise ValidationError("Please kindly ensure that all purchase order lines are added with price amount")
+
+            po_without_confirmation = self.mapped('po_ids').filtered(
+                    lambda st: st.state in ['draft', 'sent']
+                )
+            if po_without_confirmation:
+                raise ValidationError(
+                    """All POs must be confirmed at this stage. To avoid errors, 
+                    Please kindly go through each PO to confirm them""")
+        if self.stage_id.require_bill_payment: 
+            # '''Checks if the PO is expecting a picking count and there is no pickings '''
+            # without_picking_reciept = self.mapped('po_ids').filtered(
+            #         lambda st: st.incoming_picking_count > 0 and not st.picking_ids
+            #     )
+            # if without_picking_reciept:
+            #     raise ValidationError('Please ensure all PO(s) has been recieved before Vendor Bill is generated')
+            # for po in self.mapped('po_ids'):
+            #     if po.mapped('picking_ids').filtered(
+            #         lambda st: st.state != "done"
+            #     ):
+            #         raise ValidationError("Please ensure all PO picking / receipts are marked done before vendor bill is generated")
+            po_without_invoice_payment = self.mapped('po_ids').filtered(
+                    lambda st: st.invoice_status not in ['invoiced']
+                )
+            if po_without_invoice_payment:
+                raise ValidationError("Please kindly create and pay the bills for each PO lines")
+            
+    def sale_order_confirmation(self):
+        if self.stage_id.require_so_confirmation:
+            if not self.so_ids:
+                raise ValidationError(
+                    """Please enter Sale order lines"""
+                    )
+            so_without_lines = self.mapped('so_ids').filtered(
+                    lambda tot: tot.amount_total < 1
+                )
+            if so_without_lines:
+                    raise ValidationError("Please kindly ensure that all Sale order lines are added with price amount")
+
+            so_without_confirmation = self.mapped('so_ids').filtered(
+                    lambda st: st.state in ['draft', 'sent']
+                )
+            if so_without_confirmation:
+                raise ValidationError(
+                    """All SOs must be confirmed at this stage. To avoid errors, 
+                    Please kindly go through each SO to confirm them""")
+        if self.stage_id.require_bill_payment:
+            '''Checks if the PO is expecting a picking count and there is no pickings '''
+            so_without_invoice_payment = self.mapped('so_ids').filtered(
+                    lambda st: st.invoice_status not in ['invoiced'])
+            if so_without_invoice_payment:
+                raise ValidationError("Please kindly create and pay the bills for each Client Invoice lines")
+ 
     def mail_sending_direct(self, body_msg): 
         subject = "Memo Notification"
         email_from = self.env.user.email
@@ -1257,16 +2186,19 @@ class Memo_Model(models.Model):
         stage_followers_list = [
             appr.work_email for appr in self.stage_id.memo_config_id.approver_ids if appr.work_email
             ] if self.stage_id.memo_config_id.approver_ids else []
-        email_list = follower_list + stage_followers_list
-        # mail_to = self.approver_id.work_email or self.stage_id.approver_id.work_email \
-        #     or self.direct_employee_id.work_email
-        approver_emails = [eml.work_email for eml in self.stage_id.approver_ids if eml.work_email]
-        mail_to = (','.join(approver_emails))
+        
+        '''this is also going to send mail to the sub stage / task assignees'''
+        sub_task_list = []
+        for subtask in self.stage_id.sub_stage_ids:
+            sub_task_list += [ap.work_email for ap in subtask.approver_ids if ap.work_email]
+        email_list = follower_list + stage_followers_list + sub_task_list
+        approver_emails = [eml.work_email for eml in self.stage_id.approver_ids if eml.work_email] + sub_task_list
+        mail_to = (','.join(approver_emails)) 
         emails = (','.join(elist for elist in email_list))
         mail_data = {
                 'email_from': email_from,
                 'subject': subject,
-                'email_to': mail_to,
+                'email_to': mail_to or emails,
                 'reply_to': email_from,
                 'email_cc': emails,
                 'body_html': body_msg
@@ -1328,6 +2260,7 @@ class Memo_Model(models.Model):
     def approve_memo(self): # Always available to Some specific groups
         ### check if supervisor has commented on the memo if it is server access
         self.check_supervisor_comment()
+        self.procurement_confirmation()
         is_config_approver = self.determine_if_user_is_config_approver()
         if self.env.uid == self.employee_id.user_id.id and not is_config_approver:
             raise ValidationError(
@@ -1347,6 +2280,19 @@ class Memo_Model(models.Model):
         users = self.env['res.users'].sudo().browse([self.env.uid])
         self.validate_compulsory_document()
         self.update_final_state_and_approver()
+        
+        # REASON WHY I AM DOING THIS IS UNKNOWN: 
+        '''If the file has a parent project and there is no code generated
+        system should update the PO lines of the parent project: 
+        This means the POs is an Added PO approval for that project
+        
+        But if the process has parent project and has a code, the the PO line shouldnt be added to the 
+        parent project. it is a sub project'''
+        # update the related memo PO if PO exist 
+        if self.project_memo_id and self.code in [False, '', None]:
+            if self.po_ids:
+                self.project_memo_id.po_ids = [(4, po.id) for po in self.po_ids]
+
         self.sudo().write({'res_users': [(4, users.id)]})
         return self.generate_memo_artifacts(body_msg, body)
   
@@ -1371,15 +2317,19 @@ class Memo_Model(models.Model):
             self.update_memo_type_approver()
             self.mail_sending_direct(body_msg)
 
+        elif self.memo_type.memo_key == "Payment":
+            self.generate_payment_request(body_msg)
+            self.mail_sending_direct(body_msg)
+
         elif self.memo_type.memo_key == "employee_update":
             return self.generate_employee_update_request()
         else:
             document_message = "Also check related documentation on the document management system" if self.to_create_document else ""
-            body_msg = f"""Dear sir / Madam, \n \
-            <br/>I wish to notify you that a {type} with description, {self.name},<br/>  
+            body_msg = f"""Dear sir / Madam, \n <br/>
+            <br/>I wish to notify you that a {type} with description, {self.name},\n <br/> 
             from {self.employee_id.name} (Department: {self.employee_id.department_id.name or "-"}) \
-            was sent to you for review / approval. <br/> {document_message} <br/> <br/>
-            Kindly {self.get_url(self.id)} \
+            was sent to you for review / approval. \n <br/> {document_message} \n <br/>
+            Kindly {self.get_url(self.id)} \n <br/>
             <br/> Yours Faithfully<br/>{self.env.user.name}"""
             self.state = "Done"
             self.update_final_state_and_approver()
@@ -1477,12 +2427,6 @@ class Memo_Model(models.Model):
                 'target': 'current'
                 }
             return ret
-            # return self.record_to_open(
-            #     "stock.picking", 
-            #     view_id,
-            #     stock.id,
-            #     f"Stock - {stock.name}"
-            #     )
 
     def generate_stock_procurement_request(self, body_msg, body):
         """
@@ -1529,15 +2473,79 @@ class Memo_Model(models.Model):
                 'target': 'new'
                 }
             return ret
-            # return self.record_to_open(
-            #         "purchase.order", 
-            #         view_id,
-            #         po.id,
-            #         f"Purchase Order - {po.name}"
-            #         )
-
+            
+    def view_parent_project(self):
+        if not self.project_memo_id:
+            raise ValidationError('No related project found for this Record')
+        view_id = self.env.ref('company_memo.memo_model_form_view_3').id
+        ret = {
+            'name': "Parent Project",
+            'view_mode': 'form',
+            'view_id': view_id,
+            'view_type': 'form',
+            'res_model': 'memo.model',
+            'res_id': self.project_memo_id.id,
+            'type': 'ir.actions.act_window',
+            'target': 'new'
+            }
+        return ret
+    
+    def action_validate_cargo_line(self):
+        if not self.picking_type_id:
+            raise ValidationError("Please provide operation type id")
+        for rec in self.logistic_item_ids:
+            if not rec.product_id:
+                raise ValidationError("Please provide a product")
+        
+            if not rec.source_location_id:
+                raise ValidationError("Please provide source location id")
+            if not rec.destination_location_id:
+                raise ValidationError("Please provide destination id")
+            
+        vals = {
+                'scheduled_date': fields.Date.today(),
+                'picking_type_id': self.picking_type_id.id,
+                'origin': self.code,
+                'memo_id': self.id,
+                'partner_id': self.client_id.id,
+                'move_ids_without_package': [(0, 0, {
+                                'name': self.code, 
+                                'picking_type_id': li.picking_type_id.id,
+                                'location_id': li.source_location_id.id,
+                                'location_dest_id': li.destination_location_id.id,
+                                'product_id': li.product_id.id,
+                                'product_uom_qty': li.quantity_to_move,
+                                'date_deadline': fields.Date.today(),
+                            }) for li in self.logistic_item_ids]
+            }
+        stock_picking = self.env['stock.picking'].create(vals)
+        self.stock_picking_id = stock_picking.id 
+       
     def generate_vehicle_request(self, body_msg):
         # TODO: generate fleet asset
+        self.state = 'Done'
+        self.is_request_completed = True
+        self.update_memo_type_approver()
+        self.mail_sending_direct(body_msg)
+
+    def generate_payment_request(self, body_msg):
+        if self.invoice_ids:
+            invoice_without_payment = self.mapped('invoice_ids').filtered(
+                lambda se: se.payment_state not in ['paid', 'partial', 'in_payment'])
+            if invoice_without_payment:
+                raise ValidationError(
+                    """Kindly click each of the invoice line to ensure payments are posted and payments registered manually to avoid errors
+                    """)
+        elif self.payment_ids:
+            payment_without_post = self.mapped('payment_ids').filtered(
+                lambda se: se.state not in ['posted'])
+            if payment_without_post:
+                raise ValidationError(
+                    """Kindly click each of the payment lines to ensure payments are posted manually to avoid errors
+                """)
+        
+        else:
+            raise ValidationError("No payment invoice to validate")
         self.state = 'Done'
         self.is_request_completed = True
         self.update_memo_type_approver()
@@ -1832,127 +2840,36 @@ class Memo_Model(models.Model):
         # self.message_post(body=body, 
         # subtype='mt_comment',message_type='notification',partner_ids=followers)
      
-    # def generate_move_entriesxx(self):
-    #     '''pr: product obj'''
-    #     # journal_id = self.env['account.journal'].search([
-    #     #     '|',('type', '=', 'cash'),
-    #     #     ('type', '=', 'bank'),
-    #     #     ], limit=1)
-    #     journal_id = self.env['account.journal'].search(
-    #         [('type', '=', 'purchase'),
-    #          ('code', '=', 'BILL')
-    #          ], limit=1
-    #     )
-    #     account_move = self.env['account.move'].sudo()
-    #     inv = account_move.search([('memo_id', '=', self.id)], limit=1)
-    #     if not inv:
-    #         partner_id = self.employee_id.user_id.partner_id
-    #         inv = account_move.create({ 
-    #             'memo_id': self.id,
-    #             'ref': self.code,
-    #             'origin': self.code,
-    #             'partner_id': partner_id.id,
-    #             'company_id': self.env.user.company_id.id,
-    #             'currency_id': self.env.user.company_id.currency_id.id,
-    #             # Do not set default name to account move name, because it is unique 
-    #             'name': f"CASH ADV/ {self.code}",
-    #             'move_type': 'in_receipt',
-    #             'date': fields.Date.today(),
-    #             'journal_id': journal_id.id,
-    #             'invoice_line_ids': [(0, 0, {
-    #                     'name': pr.product_id.name,
-    #                     'ref': f'{self.code}: {pr.product_id.name}',
-    #                     'account_id': pr.product_id.property_account_expense_id.id or pr.product_id.categ_id.property_account_expense_categ_id.id if pr.product_id else journal_id.default_account_id.id,
-    #                     'price_unit': pr.amount_total,
-    #                     'quantity': pr.quantity_available,
-    #                     'discount': 0.0,
-    #                     'product_uom_id': pr.product_id.uom_id.id,
-    #                     'product_id': pr.product_id.id,
-    #             }) for pr in self.product_ids],
-    #         })
-    #         # inv.post()
-    #         # self.validate_invoice_and_post_journal(journal_id.id, inv)
-    #     else:
-    #         return inv
-    #     return inv
-
-    
-    
     def validate_account_invoices(self):
         if not self.is_internal_transfer:
             if not self.invoice_ids:
                 raise ValidationError("Please ensure the invoice lines are added")
             else:
-                invalid_record = self.mapped('invoice_ids').filtered(lambda s: not s.partner_id or not s.journal_id) # payment_journal_id
+                invalid_record = self.mapped('invoice_ids').filtered(
+                    lambda s: not s.partner_id or not s.journal_id) # payment_journal_id
                 if invalid_record:
-                    raise ValidationError("Partner, Payment journal must be selected. Also ensure the status is in draft")
+                    raise ValidationError("""
+                                          Partner, Payment journal must be selected. 
+                                          Also ensure the status is in draft""")
         
         else:
-            if not self.payment_ids:
+            if not self.payment_ids or self.invoice_ids:
                 raise ValidationError("Please ensure the payment lines are added")
             '''If internal payment transfer, system displays the payment line'''
-            raise ValidationError("Payments should be handled manually to ensure accuracy")
-    
+            nodone = self.mapped('payment_ids').filtered(lambda se: se.state in ['draft'])
+            if nodone:
+                raise ValidationError("Payments should be handled manually to ensure accuracy")
+            else:
+                self.state = 'Done'
+                
     def action_post_and_vallidate_payment(self): # Register Payment
         self.validate_account_invoices()
-         
-    # def action_post_and_vallidate_payment(self): # Register Payment
-    #     self.validate_account_invoices()
-    #     outbound_payment_method = self.env['account.payment.method'].sudo().search(
-    #             [('code', '=', 'manual'), ('payment_type', '=', 'outbound')], limit=1)
-    #     payment_method = 2
-    #     invoice_line_ids = []
-    #     for count, rec in enumerate(self.invoice_ids, 1):
-    #         if not rec.invoice_line_ids:
-    #             raise ValidationError(
-    #                 f'Invoice at line {count} does not have move lines'
-    #                 ) 
-    #         if rec.payment_state == 'not_paid' and rec.state == 'draft':
-    #             rec.action_post()
-    #         invoice_line_ids += [invl.id for invl in rec.invoice_line_ids]
-        
-    #         journal_id = rec.journal_id # payment_journal_id
-    #         if journal_id:
-    #             payment_method = journal_id.outbound_payment_method_line_ids[0].id if \
-    #                 journal_id.outbound_payment_method_line_ids else outbound_payment_method.id \
-    #                     if outbound_payment_method else payment_method
-    #     # raise ValidationError(type(invoice_line_ids))
-    #     payments = self.env['account.payment.register'].with_context(active_model='account.move', active_ids=self.invoice_ids.ids).create({
-    #             'group_payment': False,
-    #             'branch_id': self.branch_id.id,
-    #             'payment_method_line_id': payment_method,
-    #             'line_ids': [(6, 0, invoice_line_ids)]
-    #         })._create_payments()
-    #     self.finalize_payment()
-
-    def finalize_payment(self):
-        if not self.is_internal_transfer:
-            if self.invoice_ids:
-                all_unpaid_invoice = self.mapped('invoice_ids').filtered(lambda s: s.payment_state not in ['paid', 'in_payment'])
-                if not all_unpaid_invoice:
-                    pass
-                else:
-                    self.state = "Done"
-                    self.update_final_state_and_approver()
-            else:
-                self.state = "Done"
-        else:
-            if self.payment_ids:
-                any_unposted_payments = self.mapped('payment_ids').filtered(lambda s: s.state != 'posted')
-                if any_unposted_payments:
-                    pass
-                else:
-                    self.state = "Done"
-                    self.update_final_state_and_approver()
-            else:
-                self.state = "Done"
  
     def get_payment_method_line_id(self, payment_type, journal_id):
             if journal_id:
                 available_payment_method_lines = journal_id._get_available_payment_method_lines(payment_type)
             else:
                 available_payment_method_lines = False
-
             # Select the first available one by default.
             if available_payment_method_lines:
                 payment_method_line_id = available_payment_method_lines[0]._origin
@@ -2121,6 +3038,44 @@ class Memo_Model(models.Model):
                 exp.expiry_mail_sent = True
 
     def unlink(self):
-        for delete in self.filtered(lambda delete: delete.state in ['Sent','Approve2', 'Approve']):
-            raise ValidationError(_('You cannot delete a Memo which is in %s state.') % (delete.state,))
+        sys_admin = self.env.user.has_group("base.group_system")
+        assessed_user = self.create_uid.id == self.env.uid or sys_admin
+        for delete in self: # .filtered(lambda delete: delete.state in ['Sent','Approve2', 'Approve']):
+            if delete.state == 'submit':
+                if not assessed_user: 
+                    raise ValidationError("You cannot delete request not created by you")
+            elif delete.state in ['Sent','Approve2', 'Approve', 'Done']:
+                raise ValidationError(_('You cannot delete a Memo which is in %s state.') % (delete.state,))
         return super(Memo_Model, self).unlink()
+
+
+class MemoFrameAgreement(models.Model):
+    _name = "memo.frame.agreement"
+
+    name = fields.Char("Name", required=True)
+    active = fields.Boolean("Active", required=False, default=True)
+    code = fields.Char("Code", required=False)
+    memo_id = fields.Many2one(
+        "memo.model", 
+        string="Project Ref"
+        )
+    client_ids = fields.Many2many(
+        "res.partner", 
+        "frame_agreement_partner_rel",
+        "frame_agreement_id",
+        "partner_id",
+        string="Clients"
+        )
+    currency_id = fields.Many2one(
+        "res.currency", 
+        string="Currency"
+        )
+    agreed_budget = fields.Float("Max Budget", required=False)
+    description = fields.Char("Description", required=False)
+    
+    @api.model
+    def create(self, vals):
+        code = self.env['ir.sequence'].next_by_code('memo-frame-agreement')
+        vals['code'] = code
+        result = super(MemoFrameAgreement, self).create(vals)
+        return result
