@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- Custom Form View for Inventory (based on stock.picking) -->
+  <record id="view_warehouse_inventory_form" model="ir.ui.view">
+    <field name="name">warehouse.inventory.form</field>
+    <field name="model">stock.picking</field>
+    <field name="priority">2</field>
+    <field name="arch" type="xml">
+      <form string="Custom Inventory">
+        <header>
+            <field name="state" widget="statusbar" readonly="1" />
+        </header>
+        <sheet>
+          <group>
+            <group>
+                <field name="warehouse_id" placeholder="Select Warehouse"/>
+              <field name="financial_id" placeholder="Select Financial File"/>
+            </group>
+            <group>
+              <field name="actual_date_of_arrival" widget="date"/>
+              <field name="expected_arrival_date" widget="date"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Supplier / Consignment">
+              <group>
+                <group>
+                  <field name="receiving_supplier_id" placeholder="Select Receiving Supplier"/>
+                  <field name="supplier_po_number"/>
+                </group>
+                <group>
+                  <field name="receiving_waybill_number" placeholder="Enter Waybill No. (RL/AWB)"/>
+                </group>
+              </group>
+            </page>
+            <page string="Additional Information">
+              <group>
+                <group>
+                  <field name="critical_equipment"/>
+                  <field name="intended_vessel"/>
+                </group>
+                <group>
+                  <field name="customer_id" placeholder="Select Customer"/>
+                </group>
+              </group>
+            </page>
+          </notebook>
+          <footer>
+            <!-- Pre-allocation button to trigger the action_pre_allocate method.
+                 Note: In Odoo 17, the dynamic visibility via "attrs" is removed.
+                 You may need a custom JavaScript extension or a computed field to conditionally display the button. -->
+            <button name="action_pre_allocate"
+                    type="object"
+                    string="Pre-allocation"
+                    class="btn-primary"/>
+          </footer>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- Custom Tree (List) View for Inventory -->
+  <record id="view_warehouse_inventory_tree" model="ir.ui.view">
+    <field name="name">warehouse.inventory.tree</field>
+    <field name="model">stock.picking</field>
+    <field name="arch" type="xml">
+      <tree string="Custom Inventory">
+        <field name="name"/>
+        <field name="financial_id"/>
+        <field name="warehouse_id"/>
+        <field name="state"/>
+        <field name="actual_date_of_arrival"/>
+        <field name="customer_id"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- Action to Open the Custom Inventory Views -->
+  <record id="action_warehouse_inventory" model="ir.actions.act_window">
+    <field name="name">Warehouse Inventory</field>
+    <field name="res_model">stock.picking</field>
+    <field name="view_mode">tree,form</field>
+    <field name="view_id" ref="view_warehouse_inventory_tree"/>
+    <!-- You can uncomment and adjust the domain if needed
+    <field name="domain">[('inventory_status','in',('draft','arrived','allocated'))]</field>
+    -->
+    <field name="views" eval="[(ref('view_warehouse_inventory_tree'), 'tree'), (ref('view_warehouse_inventory_form'), 'form')]"/>
+  </record>
+
+  <menuitem id="menu_warehouse_system" name="Warehouse"/>
+
+  <menuitem id="menu_warehouse_inventory"
+            name="Warehouse Inventory"
+            parent="menu_warehouse_system"
+            action="action_warehouse_inventory"/>
+</odoo>
