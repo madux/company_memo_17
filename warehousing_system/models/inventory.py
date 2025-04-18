@@ -16,80 +16,100 @@ class StockMove(models.Model):
         ('bolt', "Bolt"),
         ('boxes', "Boxes"),
     ], string="Custom Unit of Measure")
-    
-    
+
+
 class WarehouseInventory(models.Model):
     _inherit = 'memo.model'
-    
-    warehousefig_id = fields.Many2one(
-        'memo.config', 
-        string="Category", 
-        )
-    customer_partner_id = fields.Many2one('res.partner', string='Customer ID')
-    customer_state_id = fields.Many2one('res.country.state', string='State')
-    
+
+
     financial_id = fields.Many2one(
         'purchase.order',
-        string="Financial File",
-        help="Refers to the purchase order or the office memo record containing the PO"
+        string="Financial File / PO",
+        help="Refers to the Purchase Order associated with this inventory receipt."
     )
-
     warehouse_id = fields.Many2one(
         'stock.warehouse',
         string="Warehouse",
-        help="Select the warehouse in which this picking/transfer will occur."
+        help="Select the warehouse where the goods arrived or are expected."
     )
-    
     inventory_status = fields.Selection(selection=[
         ('draft', 'Draft'),
         ('arrived', "Arrived at Warehouse"),
         ('allocated', "Allocated"),
         ('waiting', 'Waiting'),
-        ('done', 'Done'),
+        ('done', 'Processed / Shipped'),
         ('cancelled', 'Cancelled')
-    ], default='draft')
-
-    actual_date_of_arrival = fields.Date(string="Actual Arrival Date")
-
-    receiving_supplier_id = fields.Many2one('res.partner', string="Receiving Supplier")
-    supplier_po_number = fields.Char(string="Supplier PO Number")
-    receiving_waybill_number = fields.Char(string="Waybill Number (RL/AWB)")
-    expected_arrival_date = fields.Date(string="Expected Arrival Date")
-
+    ], string="Inventory Status", default='draft', index=True, tracking=True)
+    actual_date_of_arrival = fields.Date(
+        string="Actual Arrival Date",
+        tracking=True
+    )
+    receiving_supplier_id = fields.Many2one(
+        'res.partner',
+        string="Delivering Supplier/Vendor",
+        domain=[('supplier_rank', '>', 0)],
+        help="The supplier who delivered the goods."
+    )
+    supplier_po_number = fields.Char(
+        string="Supplier PO Number",
+        help="PO number from the supplier's system, if different from Odoo's PO."
+    )
+    receiving_waybill_number = fields.Char(
+        string="Waybill Number (RL/AWB)",
+        help="Receiving Log / Air Waybill number associated with the delivery."
+    )
+    expected_arrival_date = fields.Date(
+        string="Expected Arrival Date",
+        tracking=True
+    )
     critical_equipment = fields.Selection([
         ('none', "None Critical"),
         ('safety', "Safety Critical"),
         ('operations', "Operations Critical"),
         ('date_sensitive', "Date Sensitive"),
         ('hazard', "Hazard Material"),
-    ], string="Critical Equipment")
+    ], string="Criticality", help="Classification of the received items.")
+    intended_vessel = fields.Char(
+        string="Intended Vessel / Project",
+        help="The vessel, project, or destination these goods are intended for."
+    )
+    customer_id = fields.Many2one(
+        'res.partner',
+        string="End Customer / Requestor",
+        domain=[('customer_rank', '>', 0)],
+        help="The ultimate customer or internal department requesting the items."
+    )
 
-    intended_vessel = fields.Char(string="Intended Vessel")
-    customer_id = fields.Many2one('res.partner', string="Customer")
 
-    # 7) Pre-allocation status or logic
-    #    This might be a boolean or separate selection.  Alternatively, you can just
-    #    have a button that triggers a method below.
-    # pre_allocation = fields.Boolean(string="Pre-Allocation", default=False)
-
-    #    Pre-allocation.
     def action_pre_allocate(self):
-        for picking in self:
-            picking.pre_allocation = True
-            picking.inventory_status = 'allocated'
-        return True
+        # Method to transition to 'allocated' status, potentially triggering other logic
+        for record in self:
+            # Add any pre-allocation logic here (e.g., check availability)
+            # record.pre_allocation = True # Uncomment if using the boolean field
+            record.inventory_status = 'allocated'
+        return True # Standard return for button actions
 
+    # Inherit and extend the confirm action if needed
     def action_confirm(self):
-        res = super(WarehouseInventory, self).action_confirm()
-        for picking in self:
-            if picking.inventory_status == 'draft':
-                picking.inventory_status = 'arrived'
-                picking.actual_date_of_arrival = fields.Date.today()
+        # Call the original confirm method if it exists and does something important
+        res = super(WarehouseInventory, self).action_confirm() if hasattr(super(), 'action_confirm') else True
+        for record in self:
+            # Set status to 'arrived' if confirming from 'draft'
+            if record.inventory_status == 'draft':
+                record.inventory_status = 'arrived'
+                # Set arrival date only if not already set
+                if not record.actual_date_of_arrival:
+                    record.actual_date_of_arrival = fields.Date.today()
         return res
-    
+
+    # Onchange to populate supplier PO from financial_id (Purchase Order)
     @api.onchange('financial_id')
     def _onchange_financial_id(self):
         if self.financial_id:
+            # Assuming the PO name is the number you want. Adjust if needed.
             self.supplier_po_number = self.financial_id.name or ''
-    
-
+            # You could also fetch the supplier from the PO
+            if not self.receiving_supplier_id and self.financial_id.partner_id:
+                 self.receiving_supplier_id = self.financial_id.partner_id
+        # else: # Optional: Clear the field if financial_id is removed
+        #     self.supplier_po_number = ''

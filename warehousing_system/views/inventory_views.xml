@@ -1,96 +1,114 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <!-- Custom Form View for Inventory (based on stock.picking) -->
-  <record id="view_warehouse_inventory_form" model="ir.ui.view">
-    <field name="name">warehouse.inventory.form</field>
-    <field name="model">stock.picking</field>
-    <field name="priority">2</field>
-    <field name="arch" type="xml">
-      <form string="Custom Inventory">
-        <header>
-            <field name="state" widget="statusbar" readonly="1" />
-        </header>
-        <sheet>
-          <group>
-            <group>
-                <field name="warehouse_id" placeholder="Select Warehouse"/>
-              <field name="financial_id" placeholder="Select Financial File"/>
-            </group>
-            <group>
-              <field name="actual_date_of_arrival" widget="date"/>
-              <field name="expected_arrival_date" widget="date"/>
-            </group>
-          </group>
-          <notebook>
-            <page string="Supplier / Consignment">
-              <group>
-                <group>
-                  <field name="receiving_supplier_id" placeholder="Select Receiving Supplier"/>
-                  <field name="supplier_po_number"/>
-                </group>
-                <group>
-                  <field name="receiving_waybill_number" placeholder="Enter Waybill No. (RL/AWB)"/>
-                </group>
-              </group>
-            </page>
-            <page string="Additional Information">
-              <group>
-                <group>
-                  <field name="critical_equipment"/>
-                  <field name="intended_vessel"/>
-                </group>
-                <group>
-                  <field name="customer_id" placeholder="Select Customer"/>
-                </group>
-              </group>
-            </page>
-          </notebook>
-          <footer>
-            <!-- Pre-allocation button to trigger the action_pre_allocate method.
-                 Note: In Odoo 17, the dynamic visibility via "attrs" is removed.
-                 You may need a custom JavaScript extension or a computed field to conditionally display the button. -->
-            <button name="action_pre_allocate"
-                    type="object"
-                    string="Pre-allocation"
-                    class="btn-primary"/>
-          </footer>
-        </sheet>
-      </form>
-    </field>
-  </record>
 
-  <!-- Custom Tree (List) View for Inventory -->
-  <record id="view_warehouse_inventory_tree" model="ir.ui.view">
-    <field name="name">warehouse.inventory.tree</field>
-    <field name="model">stock.picking</field>
-    <field name="arch" type="xml">
-      <tree string="Custom Inventory">
-        <field name="name"/>
-        <field name="financial_id"/>
-        <field name="warehouse_id"/>
-        <field name="state"/>
-        <field name="actual_date_of_arrival"/>
-        <field name="customer_id"/>
-      </tree>
-    </field>
-  </record>
+  <!-- <record id="mtype_warehouse" model="memo.type">
+    <field name="name">Warehouse</field>
+    <field name="code">warehouse</field>
+    <field name="description">Warehouse inventory and management</field>
+  </record> -->
 
-  <!-- Action to Open the Custom Inventory Views -->
-  <record id="action_warehouse_inventory" model="ir.actions.act_window">
-    <field name="name">Warehouse Inventory</field>
-    <field name="res_model">stock.picking</field>
-    <field name="view_mode">tree,form</field>
-    <field name="view_id" ref="view_warehouse_inventory_tree"/>
-    <!-- You can uncomment and adjust the domain if needed
-    <field name="domain">[('inventory_status','in',('draft','arrived','allocated'))]</field>
-    -->
-    <field name="views" eval="[(ref('view_warehouse_inventory_tree'), 'tree'), (ref('view_warehouse_inventory_form'), 'form')]"/>
-  </record>
 
-  <menuitem id="menu_warehouse_system" name="Warehouse"/>
+    <record id="view_warehouse_inventory_tree" model="ir.ui.view">
+        <field name="name">memo.warehouse.inventory.tree</field>
+        <field name="model">memo.model</field>
+        <field name="inherit_id" eval="False"/> <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+            <tree string="Warehouse Inventory">
+                <field name="memo_type" invisible="1"/>
+                <field name="name"/>
+                <field name="financial_id"/>
+                <field name="warehouse_id"/>
+                <field name="inventory_status"/>
+                <field name="actual_date_of_arrival"/>
+                <field name="expected_arrival_date"/>
+                <field name="receiving_supplier_id"/>
+                <field name="customer_id"/>
+                <field name="intended_vessel"/>
+            </tree>
+        </field>
+    </record>
 
-  <menuitem id="menu_warehouse_inventory"
-            name="Warehouse Inventory"
-            parent="menu_warehouse_system"
-            action="action_warehouse_inventory"/>
+    <record id="view_warehouse_inventory_form" model="ir.ui.view">
+        <field name="name">memo.warehouse.inventory.form</field>
+        <field name="model">memo.model</field>
+        <field name="inherit_id" eval="False"/>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+            <form string="Warehouse Inventory">
+                 <div class="oe_chatter">
+                     <field name="message_follower_ids"/>
+                     <field name="activity_ids"/>
+                     <field name="message_ids"/>
+                 </div>
+                <sheet>
+                    <header>
+                         <field name="inventory_status" widget="statusbar" statusbar_visible="draft,arrived,allocated,done"/>
+                         <button name="action_pre_allocate" type="object" string="Pre-Allocate" class="oe_highlight" invisible="inventory_status != 'arrived'"/>
+                         </header>
+                    <h1>
+                        <field name="name" placeholder="e.g. Receipt for PO SO123"/>
+                    </h1>
+                    <group>
+                        <group>
+                            <field name="memo_type" invisible="1"/>
+                            <field name="financial_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="warehouse_id" options="{'no_create': True}"/>
+                            <field name="customer_id" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                           <field name="expected_arrival_date"/>
+                           <field name="actual_date_of_arrival"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                             <field name="receiving_supplier_id" options="{'no_create': True}"/>
+                             <field name="supplier_po_number"/>
+                        </group>
+                         <group>
+                            <field name="receiving_waybill_number"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="critical_equipment"/>
+                        </group>
+                        <group>
+                            <field name="intended_vessel"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_warehouse_inventory" model="ir.actions.act_window">
+        <field name="name">Warehouse Inventory</field>
+        <field name="res_model">memo.model</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain" eval="[( 'memo_type', '=', ref('warehousing_system.mtype_warehouse') )]"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_warehouse_inventory_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_warehouse_inventory_form')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Warehouse Inventory Memo.
+            </p><p>
+                This section tracks items arriving at the warehouse before allocation or shipment.
+            </p>
+        </field>
+    </record>
+
+    <menuitem
+        id="menu_warehouse_system_root"
+        name="Warehouse Operations"
+        sequence="50"/>
+
+    <menuitem
+        id="menu_warehouse_inventory"
+        name="Warehouse Inventory Receipts"
+        parent="menu_warehouse_system_root"
+        action="action_warehouse_inventory"
+        sequence="10"/>
+
 </odoo>
