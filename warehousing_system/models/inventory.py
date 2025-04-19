@@ -79,6 +79,59 @@ class WarehouseInventory(models.Model):
         domain=[('customer_rank', '>', 0)],
         help="The ultimate customer or internal department requesting the items."
     )
+    
+    ####### Added this fields to allw this module work
+    
+    user_owned_cash_advance_ids = fields.Many2many(
+        'memo.model', 
+        'user_owned_cash_warehouse_advance_rel',
+        'user_owned_cash_warehouse_advance_id',
+        'memo_id', string="User owned cash helpdesk advances", store=False)
+    
+    approver_ids = fields.Many2many(
+        'hr.employee',
+        'memo_model_warehouse_employee_rel',
+        'memo_id',
+        'hr_employee_id',
+        string='Approvers',
+    )
+
+    invoice_ids = fields.Many2many(
+        'account.move',
+        'memo_invoice_warehouse_rel',
+        'memo_id',
+        'invoice_id',
+        string='Invoices',
+        store=True,
+        domain="[('type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]",
+    )
+
+    partner_ids = fields.Many2many(
+        'res.partner',
+        'memo_res_warehouse_partner_rel',
+        'memo_id',
+        'partner_id',
+        string='Recipients',
+    )
+
+    attachment_ids = fields.Many2many(
+        'ir.attachment',
+        'memo_ir_attachment_warehouse_rel',
+        'memo_id',
+        'attachment_id',
+        string='Attachments',
+        store=True,
+        domain="[('res_model', '=', 'memo.model')]",
+    )
+
+    memo_sub_stage_ids = fields.Many2many(
+        'memo.sub.stage',
+        'memo_sub_stage_warehouse_rel',
+        'memo_id',
+        'sub_stage_id',
+        string='Sub‑Stages',
+        store=True,
+    )
 
 
     def action_pre_allocate(self):
@@ -113,3 +166,4 @@ class WarehouseInventory(models.Model):
                  self.receiving_supplier_id = self.financial_id.partner_id
         # else: # Optional: Clear the field if financial_id is removed
         #     self.supplier_po_number = ''
+        

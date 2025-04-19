@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- <record id="mtype_warehouse" model="memo.type">
-    <field name="name">Warehouse</field>
-    <field name="code">warehouse</field>
-    <field name="description">Warehouse inventory and management</field>
-  </record> -->
-
-
     <record id="view_warehouse_inventory_tree" model="ir.ui.view">
         <field name="name">memo.warehouse.inventory.tree</field>
         <field name="model">memo.model</field>
@@ -42,7 +35,8 @@
                  </div>
                 <sheet>
                     <header>
-                         <field name="inventory_status" widget="statusbar" statusbar_visible="draft,arrived,allocated,done"/>
+                         <!-- <field name="inventory_status" widget="statusbar" statusbar_visible="draft,arrived,allocated,done"/> -->
+                         <field name="stage_id" widget="statusbar" readonly="0" options="{'clickable': '1'}"/>
                          <button name="action_pre_allocate" type="object" string="Pre-Allocate" class="oe_highlight" invisible="inventory_status != 'arrived'"/>
                          </header>
                     <h1>
@@ -50,9 +44,11 @@
                     </h1>
                     <group>
                         <group>
-                            <field name="memo_type" invisible="1"/>
+                            <field name="memo_type" invisible="0"/>
+                            <field name="memo_setting_id" invisible="0"/>
                             <field name="financial_id" options="{'no_create': True, 'no_open': False}"/>
                             <field name="warehouse_id" options="{'no_create': True}"/>
+                            <field name="inventory_status" />
                             <field name="customer_id" options="{'no_create': True}"/>
                         </group>
                         <group>
@@ -87,6 +83,14 @@
         <field name="res_model">memo.model</field>
         <field name="view_mode">tree,form</field>
         <field name="domain" eval="[( 'memo_type', '=', ref('warehousing_system.mtype_warehouse') )]"/>
+        <field name="context" eval="{
+            'default_memo_type': ref('warehousing_system.mtype_warehouse'),
+            'default_memo_setting_id': ref('warehousing_system.memo_config_warehouse'),
+        }"/>
+        <!-- <field name="views" eval="[
+          ( ref('view_warehouse_inventory_tree'), 'tree' ),
+          ( ref('view_warehouse_inventory_form'), 'form' )
+      ]"/> -->
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'tree', 'view_id': ref('view_warehouse_inventory_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('view_warehouse_inventory_form')})]"/>

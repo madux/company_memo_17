@@ -11,6 +11,7 @@
     'author': '',
     'data': [ 
         # 'security/ir.model.access.csv',
+         'data/warehouse_stage_data.xml',
         'data/memo_type_warehouse.xml',
         'views/inventory_views.xml',
     ],
