@@ -79,91 +79,87 @@ class WarehouseInventory(models.Model):
         domain=[('customer_rank', '>', 0)],
         help="The ultimate customer or internal department requesting the items."
     )
+    po_line_ids = fields.One2many(
+        'purchase.order.line',
+        'order_id',
+        string='Item Details (per item)',
+        readonly=True,
+        copy=False,
+    )
+    
+    inbound_picking_id = fields.Many2one(
+        'stock.picking',
+        string="Related Inbound Shipment",
+        domain=[('picking_type_id.code', '=', 'incoming')],
+        help="Select the receipt operation that brought these goods into stock."
+    )
     
     ####### Added this fields to allw this module work
     
-    user_owned_cash_advance_ids = fields.Many2many(
-        'memo.model', 
-        'user_owned_cash_warehouse_advance_rel',
-        'user_owned_cash_warehouse_advance_id',
-        'memo_id', string="User owned cash helpdesk advances", store=False)
+    # user_owned_cash_advance_ids = fields.Many2many(
+    #     'memo.model', 
+    #     'user_owned_cash_warehouse_advance_rel',
+    #     'user_owned_cash_warehouse_advance_id',
+    #     'memo_id', string="User owned cash helpdesk advances", store=False)
     
-    approver_ids = fields.Many2many(
-        'hr.employee',
-        'memo_model_warehouse_employee_rel',
-        'memo_id',
-        'hr_employee_id',
-        string='Approvers',
-    )
+    # approver_ids = fields.Many2many(
+    #     'hr.employee',
+    #     'memo_model_warehouse_employee_rel',
+    #     'memo_id',
+    #     'hr_employee_id',
+    #     string='Approvers',
+    # )
 
-    invoice_ids = fields.Many2many(
-        'account.move',
-        'memo_invoice_warehouse_rel',
-        'memo_id',
-        'invoice_id',
-        string='Invoices',
-        store=True,
-        domain="[('type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]",
-    )
+    # invoice_ids = fields.Many2many(
+    #     'account.move',
+    #     'memo_invoice_warehouse_rel',
+    #     'memo_id',
+    #     'invoice_id',
+    #     string='Invoices',
+    #     store=True,
+    #     domain="[('type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]",
+    # )
 
-    partner_ids = fields.Many2many(
-        'res.partner',
-        'memo_res_warehouse_partner_rel',
-        'memo_id',
-        'partner_id',
-        string='Recipients',
-    )
+    # partner_ids = fields.Many2many(
+    #     'res.partner',
+    #     'memo_res_warehouse_partner_rel',
+    #     'memo_id',
+    #     'partner_id',
+    #     string='Recipients',
+    # )
 
-    attachment_ids = fields.Many2many(
-        'ir.attachment',
-        'memo_ir_attachment_warehouse_rel',
-        'memo_id',
-        'attachment_id',
-        string='Attachments',
-        store=True,
-        domain="[('res_model', '=', 'memo.model')]",
-    )
+    # attachment_ids = fields.Many2many(
+    #     'ir.attachment',
+    #     'memo_ir_attachment_warehouse_rel',
+    #     'memo_id',
+    #     'attachment_id',
+    #     string='Attachments',
+    #     store=True,
+    #     domain="[('res_model', '=', 'memo.model')]",
+    # )
 
-    memo_sub_stage_ids = fields.Many2many(
-        'memo.sub.stage',
-        'memo_sub_stage_warehouse_rel',
-        'memo_id',
-        'sub_stage_id',
-        string='Sub‑Stages',
-        store=True,
-    )
+    # memo_sub_stage_ids = fields.Many2many(
+    #     'memo.sub.stage',
+    #     'memo_sub_stage_warehouse_rel',
+    #     'memo_id',
+    #     'sub_stage_id',
+    #     string='Sub‑Stages',
+    #     store=True,
+    # )
 
 
     def action_pre_allocate(self):
-        # Method to transition to 'allocated' status, potentially triggering other logic
         for record in self:
-            # Add any pre-allocation logic here (e.g., check availability)
-            # record.pre_allocation = True # Uncomment if using the boolean field
+            #logic here
             record.inventory_status = 'allocated'
-        return True # Standard return for button actions
+        return True
 
-    # Inherit and extend the confirm action if needed
-    def action_confirm(self):
-        # Call the original confirm method if it exists and does something important
-        res = super(WarehouseInventory, self).action_confirm() if hasattr(super(), 'action_confirm') else True
-        for record in self:
-            # Set status to 'arrived' if confirming from 'draft'
-            if record.inventory_status == 'draft':
-                record.inventory_status = 'arrived'
-                # Set arrival date only if not already set
-                if not record.actual_date_of_arrival:
-                    record.actual_date_of_arrival = fields.Date.today()
-        return res
 
     # Onchange to populate supplier PO from financial_id (Purchase Order)
     @api.onchange('financial_id')
     def _onchange_financial_id(self):
         if self.financial_id:
-            # Assuming the PO name is the number you want. Adjust if needed.
             self.supplier_po_number = self.financial_id.name or ''
-            # You could also fetch the supplier from the PO
             if not self.receiving_supplier_id and self.financial_id.partner_id:
                  self.receiving_supplier_id = self.financial_id.partner_id
-        # else: # Optional: Clear the field if financial_id is removed
-        #     self.supplier_po_number = ''
         

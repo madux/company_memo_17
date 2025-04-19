@@ -13,6 +13,8 @@
         # 'security/ir.model.access.csv',
          'data/warehouse_stage_data.xml',
         'data/memo_type_warehouse.xml',
+        'views/financial_file_views.xml',
+        'views/stock_picking_views.xml',
         'views/inventory_views.xml',
     ],
     

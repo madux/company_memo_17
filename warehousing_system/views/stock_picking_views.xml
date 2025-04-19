@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <record id="view_picking_form_inherit_inventory" model="ir.ui.view">
+        <field name="name">stock.picking.form.inbound.memo.link</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+          <xpath expr="//sheet/group" position="after">
+            <group string="Inbound Shipment">
+              <field name="receiving_waybill_number"/>
+              <field name="bl_awb_number"/>
+            </group>
+          </xpath>
+        </field>
+      </record> 
+</odoo>

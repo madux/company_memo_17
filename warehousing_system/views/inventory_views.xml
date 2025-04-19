@@ -7,7 +7,7 @@
         <field name="inherit_id" eval="False"/> <field name="priority" eval="20"/>
         <field name="arch" type="xml">
             <tree string="Warehouse Inventory">
-                <field name="memo_type" invisible="1"/>
+                <!-- <field name="memo_type" invisible="1"/> -->
                 <field name="name"/>
                 <field name="financial_id"/>
                 <field name="warehouse_id"/>
@@ -44,12 +44,16 @@
                     </h1>
                     <group>
                         <group>
-                            <field name="memo_type" invisible="0"/>
-                            <field name="memo_setting_id" invisible="0"/>
+                            <field name="memo_type" invisible="1"/>
+                            <field name="memo_setting_id" invisible="1"/>
                             <field name="financial_id" options="{'no_create': True, 'no_open': False}"/>
                             <field name="warehouse_id" options="{'no_create': True}"/>
+                            <field name="inbound_picking_id"
+                                    options="{'no_create': True}"
+                                    domain="[('picking_type_id.code','=','incoming')]"
+                                    context="{'default_picking_type_code':'incoming'}"/>
+                            <field name="supplier_po_number"/>
                             <field name="inventory_status" />
-                            <field name="customer_id" options="{'no_create': True}"/>
                         </group>
                         <group>
                            <field name="expected_arrival_date"/>
@@ -67,11 +71,25 @@
                     </group>
                     <group>
                         <group>
+                            <field name="customer_id" options="{'no_create': True}"/>
                             <field name="critical_equipment"/>
                         </group>
                         <group>
                             <field name="intended_vessel"/>
                         </group>
+                    </group>
+                    
+                    <!-- ====== ITEMS (PO LINES) ====== -->
+                    <group string="Item Details (per item)" colspan="4">
+                        <field name="po_line_ids" nolabel="1">
+                        <tree editable="bottom">
+                            <field name="product_id"/>
+                            <field name="name"         string="Description"/>
+                            <field name="product_qty"  string="Qty"/>
+                            <field name="product_uom"  string="UoM"/>
+                            <field name="price_unit"   string="Unit Price"/>
+                        </tree>
+                        </field>
                     </group>
                 </sheet>
             </form>
