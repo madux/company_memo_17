@@ -142,12 +142,12 @@
                     
                     <!-- Card 8: Open OS&D inventory items in stock -->
                     <div class="col-md-3 mb-4">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [], 'Open OS&D inventory items in stock')">
+                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [], 'Open OS&amp;D inventory items in stock')">
                             <div class="card-icon">
                                 <i class="fa fa-lock"></i>
                             </div>
                             <div class="card-count"><t t-esc="state.stats.openOSDInventory"/></div>
-                            <div class="card-title">Open OS&D inventory items in stock</div>
+                            <div class="card-title">Open OS&amp;D inventory items in stock</div>
                         </div>
                     </div>
                     
