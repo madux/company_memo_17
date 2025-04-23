@@ -208,40 +208,90 @@ class WarehouseInventory(models.Model):
                  
     
     @api.model
-    def get_warehouse_dashboard_data(self):
+    def get_warehouse_dashboard_data(self, filters=None):
         """
         This method fetches all the necessary data for the warehouse dashboard
         Returns a dictionary with counts for different inventory statuses
+        
+        Args:
+            filters: A dictionary with filter values
+                - client: Client name
+                - fileType: File type
+                - projectNo: Project number
+                - month: Month
+                - year: Year
         """
+        if not filters:
+            filters = {}
+            
+        # Base domain for all queries
+        base_domain = []
+        
+        # Apply filters if provided
+        if filters.get('client') and filters['client'] != 'All':
+            # Assuming customer_id.name would match the client filter
+            base_domain.append(('customer_id.name', '=', filters['client']))
+            
+        if filters.get('projectNo') and filters['projectNo'] != 'All':
+            # Assuming intended_vessel would match the project filter
+            base_domain.append(('intended_vessel', '=', filters['projectNo']))
+        
+        # Handle date filters (month and year)
+        if filters.get('month') and filters['month'] != 'All':
+            # Convert month name to number (1-12)
+            month_mapping = {
+                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+            }
+            month_num = month_mapping.get(filters['month'])
+            if month_num:
+                base_domain.append(('expected_arrival_date', '!=', False))
+                base_domain.append(('expected_arrival_date', '>=', f"{filters.get('year', fields.Date.today().year)}-{month_num:02d}-01"))
+                if month_num == 12:
+                    base_domain.append(('expected_arrival_date', '<', f"{int(filters.get('year', fields.Date.today().year)) + 1}-01-01"))
+                else:
+                    base_domain.append(('expected_arrival_date', '<', f"{filters.get('year', fields.Date.today().year)}-{month_num+1:02d}-01"))
+        
         today = fields.Date.today()
-        tomorrow = fields.Date.today() + timedelta(days=1)
-        ninety_days_ago = fields.Date.today() - timedelta(days=90)
+        tomorrow = today + timedelta(days=1)
+        ninety_days_ago = today - timedelta(days=90)
         
         # Get counts for different dashboard tiles
-        waiting_for_info = self.search_count([('inventory_status', '=', 'draft')])
-        expected_tomorrow = self.search_count([('expected_arrival_date', '=', tomorrow)])
-        expected_today = self.search_count([('expected_arrival_date', '=', today)])
-        to_be_put_in_stock = self.search_count([('inventory_status', '=', 'arrived')])
-        without_allocated_storage = self.search_count([
+        waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft')])
+        expected_tomorrow = self.search_count(base_domain + [('expected_arrival_date', '=', tomorrow)])
+        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today)])
+        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived')])
+        without_allocated_storage = self.search_count(base_domain + [
             ('warehouse_id', '=', False), 
             ('inventory_status', 'not in', ['draft', 'cancelled'])
         ])
         
         # For these you may need to customize based on your business logic
-        labels_to_be_printed = self.search_count([
+        labels_to_be_printed = self.search_count(base_domain + [
             ('inventory_status', 'in', ['arrived', 'allocated']),
             # Add any other condition that indicates labels need to be printed
         ])
         
-        longer_than_90_days = self.search_count([
+        longer_than_90_days = self.search_count(base_domain + [
             ('actual_date_of_arrival', '!=', False),
             ('actual_date_of_arrival', '<', ninety_days_ago),
             ('inventory_status', 'not in', ['done', 'cancelled'])
         ])
         
         # These might need custom domain logic based on your specific requirements
-        open_osd_inventory = 0  # Implement based on your OS&D definition
-        displached_items = 0    # Implement based on your definition of displaced items
+        open_osd_inventory = self.search_count(base_domain + [
+            # Add specific conditions for OS&D inventory
+            # For example: Items with discrepancies
+            ('inventory_status', '=', 'waiting')
+        ])
+        
+        displached_items = self.search_count(base_domain + [
+            # Add specific conditions for displaced items
+            # For example: Items in a temporary location
+            ('warehouse_id', '!=', False),
+            ('inventory_status', '=', 'allocated')
+            # Add more conditions specific to your definition of "displaced"
+        ])
         
         return {
             'waitingForInfo': waiting_for_info,

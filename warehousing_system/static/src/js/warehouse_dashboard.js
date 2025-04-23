@@ -39,7 +39,7 @@ class WarehouseDashboard extends Component {
             const stats = await this.orm.call(
                 'stock.picking',
                 'get_warehouse_dashboard_data',
-                []
+                [this.state.filters]  // Pass filters to the backend
             );
 
             // Update state with fetched data
@@ -71,6 +71,9 @@ class WarehouseDashboard extends Component {
             view_mode: 'tree,form',
             domain: domain,
             name: title,
+            context: {
+                ...this.state.filters  // Include current filters in context
+            }
         });
     }
 }
