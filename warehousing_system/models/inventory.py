@@ -16,16 +16,28 @@ class StockMove(models.Model):
         ('bolt', "Bolt"),
         ('boxes', "Boxes"),
     ], string="Custom Unit of Measure")
+    
+    
+    class PickingItem(models.Model):
+        _name = 'stock.picking.item'
+        _description = "One line of items on our Inventory Creation Form"
+
+        picking_id = fields.Many2one('stock.picking', ondelete='cascade')
+        product_id = fields.Many2one('product.product', required=True)
+        description = fields.Char(String='Description')
+        qty = fields.Integer(String='Quantity',default=0)
+        customer_reference = fields.Char(String="Customer Reference")
 
 
 class WarehouseInventory(models.Model):
-    _inherit = 'memo.model'
+    _inherit = 'stock.picking'
 
 
     financial_id = fields.Many2one(
-        'purchase.order',
+        'memo.model',
         string="Financial File / PO",
-        help="Refers to the Purchase Order associated with this inventory receipt."
+        help="Refers to the Purchase Order associated with this inventory receipt.",
+        domain=[('memo_type.memo_key','=', 'warehouse')]
     )
     warehouse_id = fields.Many2one(
         'stock.warehouse',
@@ -86,6 +98,37 @@ class WarehouseInventory(models.Model):
         readonly=True,
         copy=False,
     )
+    unit_of_measure_id = fields.Many2one(
+        'uom.uom',
+        string="Unit of Measure",
+        help="Select the default unit of measure for this receipt."
+    )
+    amount = fields.Float(
+        string="Amount",
+        digits='Product Price',
+        help="Total amount for these goods"
+    )
+
+    
+    item_line_ids = fields.One2many(
+        'stock.picking.item', 'picking_id',
+        string="Item Details (per item)",
+        readonly=False, copy=False,
+    )
+
+    @api.onchange('financial_id')
+    def _onchange_financial_id_for_items(self):
+        for pick in self:
+            pick.item_line_ids = [(5,0,0)]
+            if pick.financial_id:
+                lines = []
+                for wb in pick.financial_id.waybill_ids:
+                    lines.append((0,0,{
+                        'product_id': wb.product_id.id,
+                        'description':  wb.waybill_desc or '',
+                        'qty': wb.quantity or 0
+                    }))
+                pick.item_line_ids = lines
     
     inbound_picking_id = fields.Many2one(
         'stock.picking',
@@ -162,4 +205,53 @@ class WarehouseInventory(models.Model):
             self.supplier_po_number = self.financial_id.name or ''
             if not self.receiving_supplier_id and self.financial_id.partner_id:
                  self.receiving_supplier_id = self.financial_id.partner_id
+                 
+    
+    @api.model
+    def get_warehouse_dashboard_data(self):
+        """
+        This method fetches all the necessary data for the warehouse dashboard
+        Returns a dictionary with counts for different inventory statuses
+        """
+        today = fields.Date.today()
+        tomorrow = fields.Date.today() + timedelta(days=1)
+        ninety_days_ago = fields.Date.today() - timedelta(days=90)
+        
+        # Get counts for different dashboard tiles
+        waiting_for_info = self.search_count([('inventory_status', '=', 'draft')])
+        expected_tomorrow = self.search_count([('expected_arrival_date', '=', tomorrow)])
+        expected_today = self.search_count([('expected_arrival_date', '=', today)])
+        to_be_put_in_stock = self.search_count([('inventory_status', '=', 'arrived')])
+        without_allocated_storage = self.search_count([
+            ('warehouse_id', '=', False), 
+            ('inventory_status', 'not in', ['draft', 'cancelled'])
+        ])
+        
+        # For these you may need to customize based on your business logic
+        labels_to_be_printed = self.search_count([
+            ('inventory_status', 'in', ['arrived', 'allocated']),
+            # Add any other condition that indicates labels need to be printed
+        ])
+        
+        longer_than_90_days = self.search_count([
+            ('actual_date_of_arrival', '!=', False),
+            ('actual_date_of_arrival', '<', ninety_days_ago),
+            ('inventory_status', 'not in', ['done', 'cancelled'])
+        ])
+        
+        # These might need custom domain logic based on your specific requirements
+        open_osd_inventory = 0  # Implement based on your OS&D definition
+        displached_items = 0    # Implement based on your definition of displaced items
+        
+        return {
+            'waitingForInfo': waiting_for_info,
+            'expectedTomorrow': expected_tomorrow,
+            'expectedToday': expected_today,
+            'toBePutInStock': to_be_put_in_stock,
+            'withoutAllocatedStorage': without_allocated_storage,
+            'labelsToBePrinted': labels_to_be_printed,
+            'longerThan90Days': longer_than_90_days,
+            'openOSDInventory': open_osd_inventory,
+            'displachedItems': displached_items
+        }
         

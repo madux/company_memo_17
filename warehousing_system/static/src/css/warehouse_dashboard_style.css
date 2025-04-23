@@ -1,0 +1,25 @@
+.o_warehouse_tile_kanban .o_warehouse_tile_kanban {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .dashboard_item {
+    background: #ffebee;
+    padding: 1rem;
+    border-radius: .5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+  }
+  
+  .dashboard_item:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+  }
+  
+  .item_icon i { font-size: 24px; margin-bottom: .5rem; }
+  .item_count  { font-size: 24px; font-weight: bold; }
+  .item_title  { font-size: 12px; line-height: 1.2; margin-top: .25rem; }
+  

@@ -1,0 +1,28 @@
+<odoo>
+    <record id="view_warehouse_dashboard_wizard_form" model="ir.ui.view">
+      <field name="name">warehouse.dashboard.wizard.form</field>
+      <field name="model">warehouse.dashboard</field>
+      <field name="arch" type="xml">
+        <form string="Warehouse Dashboard Filters">
+          <sheet>
+            <group>
+              <field name="client_id"/>
+              <field name="file_type"/>
+              <field name="project_no"/>
+              <field name="month"/>
+              <field name="year"/>
+            </group>
+          </sheet>
+          <footer>
+            <button string="Generate Dashboard"
+                    type="object"
+                    name="action_create_tiles"
+                    class="btn-primary"/>
+            <button string="Cancel"
+                    class="btn-secondary"
+                    special="cancel"/>
+          </footer>
+        </form>
+      </field>
+    </record>
+  </odoo>  

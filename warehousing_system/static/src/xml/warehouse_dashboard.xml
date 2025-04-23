@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="warehousing_system.WarehouseDashboard" owl="1">
+        <div class="warehouse-dashboard">
+            <h1 class="mb-4">Warehouse Inventory Dashboard</h1>
+            
+            <!-- Filter controls -->
+            <div class="dashboard-filters">
+                <div class="row mb-4">
+                    <div class="col">
+                        <label>Client</label>
+                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'client')">
+                            <option selected="selected">Saipem</option>
+                            <option>Client 2</option>
+                            <option>Client 3</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>File Type</label>
+                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
+                            <option selected="selected">Warehouse</option>
+                            <option>Purchase</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Project No.</label>
+                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'projectNo')">
+                            <option selected="selected">PR02345</option>
+                            <option>PR02346</option>
+                            <option>PR02347</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Month</label>
+                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
+                            <option selected="selected">Jan</option>
+                            <option>Feb</option>
+                            <option>Mar</option>
+                            <option>Apr</option>
+                            <option>May</option>
+                            <option>Jun</option>
+                            <option>Jul</option>
+                            <option>Aug</option>
+                            <option>Sep</option>
+                            <option>Oct</option>
+                            <option>Nov</option>
+                            <option>Dec</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Year</label>
+                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'year')">
+                            <option selected="selected">All</option>
+                            <option>2025</option>
+                            <option>2024</option>
+                            <option>2023</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dashboard cards -->
+            <div class="dashboard-cards">
+                <div class="row">
+                    <!-- First row of cards -->
+                    <div class="col-md-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft']], 'Inventory Items Waiting for Info')">
+                            <div class="card-icon">
+                                <i class="fa fa-info-circle"></i>
+                            </div>
+                            <div class="card-count"><t t-esc="state.stats.waitingForInfo"/></div>
+                            <div class="card-title">Inventory Items Waiting for Info</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Other cards follow the same pattern... -->
+                    <!-- Include all other cards as in the previous response -->
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

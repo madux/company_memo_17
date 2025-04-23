@@ -2,101 +2,82 @@
 <odoo>
 
     <record id="view_warehouse_inventory_tree" model="ir.ui.view">
-        <field name="name">memo.warehouse.inventory.tree</field>
-        <field name="model">memo.model</field>
-        <field name="inherit_id" eval="False"/> <field name="priority" eval="20"/>
+        <field name="name">stock.picking.warehouse.tree</field>
+        <field name="model">stock.picking</field>
+        <field name="priority" eval="20"/>
         <field name="arch" type="xml">
-            <tree string="Warehouse Inventory">
-                <!-- <field name="memo_type" invisible="1"/> -->
-                <field name="name"/>
-                <field name="financial_id"/>
-                <field name="warehouse_id"/>
-                <field name="inventory_status"/>
-                <field name="actual_date_of_arrival"/>
-                <field name="expected_arrival_date"/>
-                <field name="receiving_supplier_id"/>
-                <field name="customer_id"/>
-                <field name="intended_vessel"/>
-            </tree>
+          <tree string="Warehouse Inventory Receipts">
+            <field name="name"/>
+            <field name="financial_id" context="{'show_address': False}"/>
+            <field name="warehouse_id"/>
+            <field name="inventory_status"/>
+            <field name="actual_date_of_arrival"/>
+            <field name="expected_arrival_date"/>
+            <field name="receiving_supplier_id"/>
+          </tree>
         </field>
     </record>
 
     <record id="view_warehouse_inventory_form" model="ir.ui.view">
-        <field name="name">memo.warehouse.inventory.form</field>
-        <field name="model">memo.model</field>
-        <field name="inherit_id" eval="False"/>
+        <field name="name">stock.picking.warehouse.form.custom</field>
+        <field name="model">stock.picking</field>
         <field name="priority" eval="20"/>
         <field name="arch" type="xml">
-            <form string="Warehouse Inventory">
-                 <div class="oe_chatter">
-                     <field name="message_follower_ids"/>
-                     <field name="activity_ids"/>
-                     <field name="message_ids"/>
-                 </div>
+            <form string="Inventory Creation">
                 <sheet>
-                    <header>
-                         <!-- <field name="inventory_status" widget="statusbar" statusbar_visible="draft,arrived,allocated,done"/> -->
-                         <field name="stage_id" widget="statusbar" readonly="0" options="{'clickable': '1'}"/>
-                         <button name="action_pre_allocate" type="object" string="Pre-Allocate" class="oe_highlight" invisible="inventory_status != 'arrived'"/>
-                         </header>
-                    <h1>
-                        <field name="name" placeholder="e.g. Receipt for PO SO123"/>
-                    </h1>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1" class="oe_inline" placeholder="Inventory Creation"/></h1>
+                    </div>
+                    
                     <group>
                         <group>
-                            <field name="memo_type" invisible="1"/>
-                            <field name="memo_setting_id" invisible="1"/>
-                            <field name="financial_id" options="{'no_create': True, 'no_open': False}"/>
-                            <field name="warehouse_id" options="{'no_create': True}"/>
-                            <field name="inbound_picking_id"
-                                    options="{'no_create': True}"
-                                    domain="[('picking_type_id.code','=','incoming')]"
-                                    context="{'default_picking_type_code':'incoming'}"/>
-                            <field name="supplier_po_number"/>
-                            <field name="inventory_status" />
+                            <field name="warehouse_id" placeholder="Select Warehouse *" options="{'no_create': True}"/>
+                            <field name="financial_id" placeholder="Select Warehouse File" options="{'no_create': True}"/>
                         </group>
                         <group>
-                           <field name="expected_arrival_date"/>
-                           <field name="actual_date_of_arrival"/>
-                        </group>
-                    </group>
-                    <group>
-                        <group>
-                             <field name="receiving_supplier_id" options="{'no_create': True}"/>
-                             <field name="supplier_po_number"/>
-                        </group>
-                         <group>
-                            <field name="receiving_waybill_number"/>
-                        </group>
-                    </group>
-                    <group>
-                        <group>
-                            <field name="customer_id" options="{'no_create': True}"/>
-                            <field name="critical_equipment"/>
+                            <field name="inventory_status" placeholder="Select Inventory Status *" 
+                                   widget="selection" options="{'no_create': True}"/>
+                            <field name="inbound_picking_id" placeholder="Related Inbound Shipment" 
+                                   options="{'no_create': True}"/>
                         </group>
                         <group>
-                            <field name="intended_vessel"/>
+                            <field name="company_id" placeholder="Company *" options="{'no_create': True}"/>
+                            <field name="actual_date_of_arrival" placeholder="Actual Arrival Date"/>
                         </group>
                     </group>
                     
-                    <!-- ====== ITEMS (PO LINES) ====== -->
-                    <group string="Item Details (per item)" colspan="4">
-                        <field name="po_line_ids" nolabel="1">
+                    <!-- Item Info block -->
+                    <div class="o_horizontal_separator mt-4 mb-3">Item Info</div>
+                    <group>
+                        <group>
+                            <field name="customer_id" required="1" placeholder="Customer *" options="{'no_create': True}"/>
+                            <field name="intended_vessel" placeholder="Intended Vessel" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="critical_equipment" placeholder="Critical Equipment" options="{'no_create': True}"/>
+                            <field name="unit_of_measure_id" placeholder="Unit of Measure" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="amount" placeholder="Amount" widget="integer"/>
+                        </group>
+                    </group>
+         
+                    <!-- Item Details -->
+                    <div class="o_horizontal_separator mt-4 mb-3">Item Details (per item)</div>
+                    <field name="item_line_ids">
                         <tree editable="bottom">
                             <field name="product_id"/>
-                            <field name="name"         string="Description"/>
-                            <field name="product_qty"  string="Qty"/>
-                            <field name="product_uom"  string="UoM"/>
-                            <field name="price_unit"   string="Unit Price"/>
+                            <field name="description" placeholder="Item Description *"/>
+                            <field name="customer_reference" placeholder="Customer Reference"/>
+                            <field name="qty"/>
                         </tree>
-                        </field>
-                    </group>
+                    </field>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <record id="action_warehouse_inventory" model="ir.actions.act_window">
+    <!-- <record id="action_warehouse_inventory" model="ir.actions.act_window">
         <field name="name">Warehouse Inventory</field>
         <field name="res_model">memo.model</field>
         <field name="view_mode">tree,form</field>
@@ -105,10 +86,6 @@
             'default_memo_type': ref('warehousing_system.mtype_warehouse'),
             'default_memo_setting_id': ref('warehousing_system.memo_config_warehouse'),
         }"/>
-        <!-- <field name="views" eval="[
-          ( ref('view_warehouse_inventory_tree'), 'tree' ),
-          ( ref('view_warehouse_inventory_form'), 'form' )
-      ]"/> -->
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'tree', 'view_id': ref('view_warehouse_inventory_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('view_warehouse_inventory_form')})]"/>
@@ -119,7 +96,39 @@
                 This section tracks items arriving at the warehouse before allocation or shipment.
             </p>
         </field>
-    </record>
+    </record> -->
+
+    <!-- <record id="action_warehouse_inventory" model="ir.actions.act_window">
+        <field name="name">Warehouse Inventory</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">tree, form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+        (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
+        (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
+        <field name="domain">
+          []
+        </field>
+        <field name="target">current</field>
+      </record> -->
+
+      <record id="action_warehouse_inventory" model="ir.actions.act_window">
+        <field name="name">Warehouse Inventory Receipts</field>
+        <field name="res_model">stock.picking</field>
+        <!-- we open the form first, then tree -->
+        <field name="view_mode">form,tree</field>
+        <!-- default_form (the first one) -->
+        <field name="view_id" ref="warehousing_system.view_warehouse_inventory_tree"/>
+        <!-- full list of views -->
+        <field name="views" eval="[
+            (ref('warehousing_system.view_warehouse_inventory_form'), 'form'),
+            (ref('warehousing_system.view_warehouse_inventory_tree'), 'tree')
+          ]"/>
+        <!-- only incoming receipts -->
+        <field name="domain">[('picking_type_code','=','incoming')]</field>
+        <!-- set defaults on create if you like -->
+        <field name="context">{'default_picking_type_code': 'incoming'}</field>
+      </record>
+      
 
     <menuitem
         id="menu_warehouse_system_root"
@@ -129,8 +138,8 @@
     <menuitem
         id="menu_warehouse_inventory"
         name="Warehouse Inventory Receipts"
-        parent="menu_warehouse_system_root"
-        action="action_warehouse_inventory"
-        sequence="10"/>
+        parent="warehousing_system.menu_warehouse_system_root"
+        action="warehousing_system.action_warehouse_inventory"
+        sequence="1"/>
 
 </odoo>

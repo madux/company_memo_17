@@ -1,0 +1,33 @@
+<odoo>
+    <!-- Kanban on each KPI tile -->
+    <record id="view_warehouse_dashboard_tile_kanban" model="ir.ui.view">
+      <field name="name">warehouse.dashboard.tile.kanban</field>
+      <field name="model">warehouse.dashboard.tile</field>
+      <field name="arch" type="xml">
+        <kanban class="o_warehouse_tile_kanban" default_group_by="dashboard_id">
+          <field name="dashboard_id"/>
+          <field name="key"/>
+          <field name="title"/>
+          <field name="icon"/>
+          <field name="count"/>
+          <templates>
+            <t t-name="kanban-box">
+              <div t-attf-class="oe_kanban_card oe_kanban_global_click dashboard_item"
+                   t-att-data-action="'action_view_' + record.key.raw_value">
+                <div class="item_icon">
+                  <i t-attf-class="fa #{ record.icon.raw_value } text-danger"/>
+                </div>
+                <div class="item_count">
+                  <t t-esc="record.count.raw_value"/>
+                </div>
+                <div class="item_title">
+                  <t t-esc="record.title.raw_value"/>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+  </odoo>
+  

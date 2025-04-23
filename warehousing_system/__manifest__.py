@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 {
     'name': "Warehousing Module",
@@ -7,18 +5,31 @@
     'category': '',
     'sequence': 3,
     'summary': 'Used to manage warehouse',
-    'depends': ['base', 'stock', 'purchase', 'company_memo', 'mail', 'product'],
+    'depends': ['base', 'stock', 'purchase', 'web', 'company_memo', 'mail', 'product'],
     'author': '',
     'data': [ 
-        # 'security/ir.model.access.csv',
-         'data/warehouse_stage_data.xml',
+        'security/ir.model.access.csv',
+        'data/warehouse_stage_data.xml',
         'data/memo_type_warehouse.xml',
         'views/financial_file_views.xml',
         'views/stock_picking_views.xml',
         'views/inventory_views.xml',
+        'views/warehouse_dashboard_menu.xml'
+        # 'views/inventory_dashboard.xml'
+        # 'wizards/warehouse_dashboard_wizard_views.xml',
+        # 'wizards/warehouse_dashboard_tile_views.xml',
+        # 'wizards/warehouse_dashboard_menu.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            # 'warehousing_system/static/src/css/warehouse_dashboard_style.css',
+            'warehousing_system/static/src/xml/warehouse_dashboard.xml',
+            'warehousing_system/static/src/js/warehouse_dashboard.js',
+            'warehousing_system/static/src/scss/warehouse_dashboard.scss',
+        ],
+    },
     
     'installable': True,
-    'auto_install': True,
+    'auto_install': False,
     'license': 'LGPL-3',
 }
