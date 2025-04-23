@@ -211,98 +211,86 @@ class WarehouseInventory(models.Model):
     @api.model
     def get_warehouse_dashboard_data(self, filters=None):
         """
-        This method fetches all the necessary data for the warehouse dashboard
-        Returns a dictionary with counts for different inventory statuses
-        
-        Args:
-            filters: A dictionary with filter values
-                - client: Client name
-                - fileType: File type
-                - projectNo: Project number
-                - month: Month
-                - year: Year
-        """
-        if not filters:
-            filters = {}
-            
-        # Base domain for all queries
-        base_domain = []
-        
-        # Apply filters if provided
-        if filters.get('client') and filters['client'] != 'All':
-            # Assuming customer_id.name would match the client filter
-            base_domain.append(('customer_id.name', '=', filters['client']))
-            
-        if filters.get('projectNo') and filters['projectNo'] != 'All':
-            # Assuming intended_vessel would match the project filter
-            base_domain.append(('intended_vessel', '=', filters['projectNo']))
-        
-        # Handle date filters (month and year)
-        if filters.get('month') and filters['month'] != 'All':
-            # Convert month name to number (1-12)
-            month_mapping = {
-                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-            }
-            month_num = month_mapping.get(filters['month'])
-            if month_num:
-                base_domain.append(('expected_arrival_date', '!=', False))
-                base_domain.append(('expected_arrival_date', '>=', f"{filters.get('year', fields.Date.today().year)}-{month_num:02d}-01"))
-                if month_num == 12:
-                    base_domain.append(('expected_arrival_date', '<', f"{int(filters.get('year', fields.Date.today().year)) + 1}-01-01"))
-                else:
-                    base_domain.append(('expected_arrival_date', '<', f"{filters.get('year', fields.Date.today().year)}-{month_num+1:02d}-01"))
-        
-        today = fields.Date.today()
-        tomorrow = today + timedelta(days=1)
-        ninety_days_ago = today - timedelta(days=90)
-        
-        # Get counts for different dashboard tiles
-        waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft')])
-        expected_tomorrow = self.search_count(base_domain + [('expected_arrival_date', '=', tomorrow)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today)])
-        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived')])
-        without_allocated_storage = self.search_count(base_domain + [
-            ('warehouse_id', '=', False), 
-            ('inventory_status', 'not in', ['draft', 'cancelled'])
-        ])
-        
-        # For these you may need to customize based on your business logic
-        labels_to_be_printed = self.search_count(base_domain + [
-            ('inventory_status', 'in', ['arrived', 'allocated']),
-            # Add any other condition that indicates labels need to be printed
-        ])
-        
-        longer_than_90_days = self.search_count(base_domain + [
-            ('actual_date_of_arrival', '!=', False),
-            ('actual_date_of_arrival', '<', ninety_days_ago),
-            ('inventory_status', 'not in', ['done', 'cancelled'])
-        ])
-        
-        # These might need custom domain logic based on your specific requirements
-        open_osd_inventory = self.search_count(base_domain + [
-            # Add specific conditions for OS&D inventory
-            # For example: Items with discrepancies
-            ('inventory_status', '=', 'waiting')
-        ])
-        
-        displached_items = self.search_count(base_domain + [
-            # Add specific conditions for displaced items
-            # For example: Items in a temporary location
-            ('warehouse_id', '!=', False),
-            ('inventory_status', '=', 'allocated')
-            # Add more conditions specific to your definition of "displaced"
-        ])
-        
-        return {
-            'waitingForInfo': waiting_for_info,
-            'expectedTomorrow': expected_tomorrow,
-            'expectedToday': expected_today,
-            'toBePutInStock': to_be_put_in_stock,
-            'withoutAllocatedStorage': without_allocated_storage,
-            'labelsToBePrinted': labels_to_be_printed,
-            'longerThan90Days': longer_than_90_days,
-            'openOSDInventory': open_osd_inventory,
-            'displachedItems': displached_items
+        Return a dict of counts for each dashboard tile, applying optional filters.
+
+        filters: {
+            client:    str or None,
+            fileType:  str or None,    # unused currently
+            projectNo: str or None,
+            month:     'Jan'..'Dec' or None,
+            year:      'YYYY' or None,
         }
+        """
+        # 1) Normalize filters
+        filters = filters or {}
+        client     = filters.get('client')
+        projectNo  = filters.get('projectNo')
+        month      = filters.get('month')
+        year       = filters.get('year')
+
+        # 2) Build the reusable base domain from client & projectNo
+        base = []
+        if client and client != 'All':
+            base.append(('customer_id.name', '=', client))
+        if projectNo and projectNo != 'All':
+            base.append(('intended_vessel', '=', projectNo))
+
+        # 3) Handle month/year date window
+        if month and month != 'All':
+            month_map = {
+                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+                'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8,
+                'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+            }
+            m = month_map.get(month)
+            if m:
+                y = int(year) if year and year != 'All' else fields.Date.today().year
+                start = fields.Date.to_string(fields.Date.from_string(f'{y}-01-01') + timedelta(days=(m-1)*30))
+                # approximate month length – you could refine with relativedelta
+                end_day = (fields.Date.from_string(f'{y}-{m:02d}-01') + timedelta(days=31)).strftime('%Y-%m-%d')
+                base += [
+                    ('expected_arrival_date', '>=', f'{y}-{m:02d}-01'),
+                    ('expected_arrival_date', '<',  end_day),
+                ]
+
+        # 4) Prepare date tokens
+        today         = fields.Date.context_today(self)
+        tomorrow      = today + timedelta(days=1)
+        ninety_days_ago = today - timedelta(days=90)
+
+        # 5) Define the KPI‐specific domain fragments
+        kpi_domains = {
+            'waitingForInfo':          [('inventory_status', '=', 'draft')],
+            'expectedTomorrow':        [('expected_arrival_date', '=', tomorrow)],
+            'expectedToday':           [('expected_arrival_date', '=', today)],
+            'toBePutInStock':          [('inventory_status', '=', 'arrived')],
+            'withoutAllocatedStorage': [
+                ('warehouse_id', '=', False),
+                ('inventory_status', 'not in', ['draft','cancelled']),
+            ],
+            'labelsToBePrinted':       [
+                ('inventory_status', 'in', ['arrived','allocated']),
+            ],
+            'longerThan90Days':        [
+                ('actual_date_of_arrival', '<', ninety_days_ago),
+                ('inventory_status', 'not in', ['done','cancel']),
+            ],
+            'openOSDInventory':        [
+                # customize your OS&D logic here
+                ('inventory_status', '=', 'waiting'),
+            ],
+            'displachedItems':         [
+                # customize your displaced-item logic here
+                ('inventory_status', '=', 'allocated'),
+                ('warehouse_id', '!=', False),
+            ],
+        }
+
+        # 6) Run search_count for each KPI
+        result = {}
+        StockPicking = self.env['stock.picking']
+        for key, domain_part in kpi_domains.items():
+            result[key] = StockPicking.search_count(base + domain_part)
+
+        return result
         

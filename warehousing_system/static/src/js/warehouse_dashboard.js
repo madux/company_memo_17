@@ -1,12 +1,13 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onWillStart, useState, onMounted } from "@odoo/owl";
 
 class WarehouseDashboard extends Component {
     setup() {
         this.orm = useService("orm");
         this.actionService = useService("action");
+        this.notificationService = useService("notification");
         
         this.state = useState({
             filters: {
@@ -28,12 +29,29 @@ class WarehouseDashboard extends Component {
                 displachedItems: 0
             }
         });
-
+        
         onWillStart(async () => {
             await this.fetchDashboardData();
         });
+        
+        onMounted(() => {
+            // Ensure proper layout rendering after component is mounted
+            this._adjustLayout();
+            
+            // Add resize listener for responsive adjustments
+            window.addEventListener('resize', this._adjustLayout);
+        });
     }
-
+    
+    _adjustLayout() {
+        // Force recalculation of layout after render
+        const dashboard = document.querySelector('.warehouse-dashboard');
+        if (dashboard) {
+            // Trigger browser reflow
+            void dashboard.offsetWidth;
+        }
+    }
+    
     async fetchDashboardData() {
         try {
             // Fetch all stats in a single call for better performance
@@ -42,7 +60,7 @@ class WarehouseDashboard extends Component {
                 'get_warehouse_dashboard_data',
                 [this.state.filters]  // Pass filters to the backend
             );
-            
+           
             // Update state with fetched data
             this.state.stats = stats || {
                 waitingForInfo: 0,
@@ -57,22 +75,22 @@ class WarehouseDashboard extends Component {
             };
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
-            // Show a notification to the user (if notification service is available)
-            if (this.notification) {
-                this.notification.notify({
-                    title: "Dashboard Error",
-                    message: "Failed to load dashboard data. Please try again later.",
+            // Use the correct notification method - add instead of notify
+            this.notificationService.add(
+                "Failed to load dashboard data. Please try again later.",
+                {
                     type: "danger",
-                });
-            }
+                    title: "Dashboard Error",
+                }
+            );
         }
     }
-
+    
     onFilterChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
         this.fetchDashboardData();
     }
-
+    
     async onCardClick(actionName, domain, title) {
         try {
             await this.actionService.doAction({
@@ -87,7 +105,20 @@ class WarehouseDashboard extends Component {
             });
         } catch (error) {
             console.error("Failed to execute action:", error);
+            // Use the correct notification method - add instead of notify
+            this.notificationService.add(
+                "Failed to open view. Please try again.",
+                {
+                    type: "warning",
+                    title: "Action Error",
+                }
+            );
         }
+    }
+    
+    // Clean up method to remove event listener
+    willUnmount() {
+        window.removeEventListener('resize', this._adjustLayout);
     }
 }
 
