@@ -7,6 +7,7 @@ class WarehouseDashboard extends Component {
     setup() {
         this.orm = useService("orm");
         this.actionService = useService("action");
+        
         this.state = useState({
             filters: {
                 client: 'Saipem',
@@ -41,7 +42,7 @@ class WarehouseDashboard extends Component {
                 'get_warehouse_dashboard_data',
                 [this.state.filters]  // Pass filters to the backend
             );
-
+            
             // Update state with fetched data
             this.state.stats = stats || {
                 waitingForInfo: 0,
@@ -56,6 +57,14 @@ class WarehouseDashboard extends Component {
             };
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+            // Show a notification to the user (if notification service is available)
+            if (this.notification) {
+                this.notification.notify({
+                    title: "Dashboard Error",
+                    message: "Failed to load dashboard data. Please try again later.",
+                    type: "danger",
+                });
+            }
         }
     }
 
@@ -65,16 +74,20 @@ class WarehouseDashboard extends Component {
     }
 
     async onCardClick(actionName, domain, title) {
-        await this.actionService.doAction({
-            type: 'ir.actions.act_window',
-            res_model: 'stock.picking',
-            view_mode: 'tree,form',
-            domain: domain,
-            name: title,
-            context: {
-                ...this.state.filters  // Include current filters in context
-            }
-        });
+        try {
+            await this.actionService.doAction({
+                type: 'ir.actions.act_window',
+                res_model: 'stock.picking',
+                view_mode: 'tree,form',
+                domain: domain,
+                name: title,
+                context: {
+                    ...this.state.filters  // Include current filters in context
+                }
+            });
+        } catch (error) {
+            console.error("Failed to execute action:", error);
+        }
     }
 }
 
