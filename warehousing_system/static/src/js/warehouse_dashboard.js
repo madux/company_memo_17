@@ -8,14 +8,13 @@ class WarehouseDashboard extends Component {
         this.orm = useService("orm");
         this.actionService = useService("action");
         this.rpc = useService("rpc");
-        // Remove notification service reference since it's not available or defined differently
         
         // Initialize state with default values
         this.state = useState({
             filters: {
                 client: '',  // Empty string for text input
                 fileType: 'All',
-                projectNo: 'All',
+                projectNo: '',  // Empty string for text input
                 month: 'All',
                 year: 'All'
             },
@@ -28,7 +27,6 @@ class WarehouseDashboard extends Component {
                 { id: 'done', name: 'Processed / Shipped' },
                 { id: 'cancelled', name: 'Cancelled' }
             ],
-            projectOptions: [{ id: 'All', name: 'All' }],
             stats: {
                 waitingForInfo: 0,
                 expectedTomorrow: 0,
@@ -44,31 +42,8 @@ class WarehouseDashboard extends Component {
         });
 
         onWillStart(async () => {
-            await this.loadFilterOptions();
             await this.fetchDashboardData();
         });
-    }
-
-    async loadFilterOptions() {
-        try {
-            // Load project numbers (from unique supplier_po_number values)
-            const projects = await this.orm.call(
-                'stock.picking',
-                'search_read',
-                [[['supplier_po_number', '!=', false]]],
-                { fields: ['supplier_po_number'] }
-            );
-            
-            // Get unique project numbers
-            const uniqueProjects = [...new Set(projects.map(p => p.supplier_po_number))];
-            this.state.projectOptions = [
-                { id: 'All', name: 'All' },
-                ...uniqueProjects.map(p => ({ id: p, name: p }))
-            ];
-        } catch (error) {
-            console.error("Failed to load filter options:", error);
-            // Remove notification code
-        }
     }
 
     async fetchDashboardData() {
@@ -104,7 +79,6 @@ class WarehouseDashboard extends Component {
             };
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
-            // Remove notification code
         }
     }
 
@@ -114,8 +88,8 @@ class WarehouseDashboard extends Component {
     }
 
     // For text input we need a separate handler with debounce
-    onClientInputChange(event) {
-        this.state.filters.client = event.target.value;
+    onClientInputChange(event, filterName) {
+        this.state.filters[filterName] = event.target.value;
         this._debouncedFetch();
     }
 
@@ -144,8 +118,8 @@ class WarehouseDashboard extends Component {
         }
         
         // Add project number filter (supplier_po_number)
-        if (this.state.filters.projectNo !== 'All') {
-            domain.push(['supplier_po_number', '=', this.state.filters.projectNo]);
+        if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
+            domain.push(['supplier_po_number', 'ilike', this.state.filters.projectNo.trim()]);
         }
         
         // Add date filters (month and year)
@@ -191,14 +165,13 @@ class WarehouseDashboard extends Component {
                     // Include current filters in context
                     search_default_client: this.state.filters.client || false,
                     search_default_fileType: this.state.filters.fileType !== 'All' ? this.state.filters.fileType : false,
-                    search_default_projectNo: this.state.filters.projectNo !== 'All' ? this.state.filters.projectNo : false,
+                    search_default_projectNo: this.state.filters.projectNo || false,
                     search_default_month: this.state.filters.month !== 'All' ? this.state.filters.month : false,
                     search_default_year: this.state.filters.year !== 'All' ? this.state.filters.year : false
                 }
             });
         } catch (error) {
             console.error("Failed to execute action:", error);
-            // Remove notification code
         }
     }
 }

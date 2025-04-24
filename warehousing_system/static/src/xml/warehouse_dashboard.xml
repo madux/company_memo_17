@@ -4,14 +4,14 @@
     <div class="warehouse-dashboard container-fluid px-4">
       <h1 class="mb-4">Warehouse Inventory Dashboard</h1>
 
-      <!-- Updated filter controls with text input for client -->
+      <!-- Updated filter controls with text inputs for client and projectNo -->
       <div class="dashboard-filters mb-4">
         <div class="row">
           <div class="col">
             <label>Client</label>
             <input type="text" class="form-control" t-att-value="state.filters.client" 
                    placeholder="Search by client name" 
-                   t-on-input="(ev) => this.onClientInputChange(ev)" />
+                   t-on-input="(ev) => this.onClientInputChange(ev, 'client')" />
           </div>
           <div class="col">
             <label>File Type</label>
@@ -25,13 +25,9 @@
           </div>
           <div class="col">
             <label>Project No.</label>
-            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'projectNo')">
-              <t t-foreach="state.projectOptions" t-as="option" t-key="option.id">
-                <option t-att-value="option.id" t-att-selected="state.filters.projectNo === option.id">
-                  <t t-esc="option.name"/>
-                </option>
-              </t>
-            </select>
+            <input type="text" class="form-control" t-att-value="state.filters.projectNo" 
+                   placeholder="Search by project number" 
+                   t-on-input="(ev) => this.onClientInputChange(ev, 'projectNo')" />
           </div>
           <div class="col">
             <label>Month</label>
@@ -73,6 +69,7 @@
             <div class="card-title">Inventory Items Waiting for Info</div>
           </div>
         </div>
+        <!-- Rest of the cards remain unchanged -->
         <!-- Card 2 -->
         <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', [['expected_arrival_date', '=', 'tomorrow']], 'Inventory Items Expected Tomorrow')">
           <div class="warehouse-card red-card">
