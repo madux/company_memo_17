@@ -216,11 +216,11 @@ class WarehouseInventory(models.Model):
         
         Args:
             filters: A dictionary with filter values
-                - client: Client name
-                - fileType: File type
-                - projectNo: Project number
-                - month: Month
-                - year: Year
+                - client: Text to search in customer_id.name
+                - fileType: Inventory status
+                - projectNo: Supplier PO number
+                - month: Month for create_date
+                - year: Year for create_date
         """
         if not filters:
             filters = {}
@@ -229,29 +229,53 @@ class WarehouseInventory(models.Model):
         base_domain = []
         
         # Apply filters if provided
-        if filters.get('client') and filters['client'] != 'All':
-            # Assuming customer_id.name would match the client filter
-            base_domain.append(('customer_id.name', '=', filters['client']))
-            
+        if filters.get('client') and filters['client'].strip():
+            # Search by customer name (partial match)
+            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
+        
+        # Filter by inventory status
+        if filters.get('fileType') and filters['fileType'] != 'All':
+            base_domain.append(('inventory_status', '=', filters['fileType']))
+        
+        # Filter by supplier PO number
         if filters.get('projectNo') and filters['projectNo'] != 'All':
-            # Assuming intended_vessel would match the project filter
-            base_domain.append(('intended_vessel', '=', filters['projectNo']))
+            base_domain.append(('supplier_po_number', '=', filters['projectNo']))
         
         # Handle date filters (month and year)
-        if filters.get('month') and filters['month'] != 'All':
+        if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
             # Convert month name to number (1-12)
             month_mapping = {
                 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
             }
-            month_num = month_mapping.get(filters['month'])
-            if month_num:
-                base_domain.append(('expected_arrival_date', '!=', False))
-                base_domain.append(('expected_arrival_date', '>=', f"{filters.get('year', fields.Date.today().year)}-{month_num:02d}-01"))
+            
+            # Determine year to use
+            year = fields.Date.today().year
+            if filters.get('year') and filters['year'] != 'All':
+                try:
+                    year = int(filters['year'])
+                except (ValueError, TypeError):
+                    pass
+            
+            # If month is specified, create date range for that month
+            if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
+                month_num = month_mapping[filters['month']]
+                start_date = fields.Date.to_string(date(year, month_num, 1))
+                
+                # Calculate end date (first day of next month)
                 if month_num == 12:
-                    base_domain.append(('expected_arrival_date', '<', f"{int(filters.get('year', fields.Date.today().year)) + 1}-01-01"))
+                    end_date = fields.Date.to_string(date(year + 1, 1, 1))
                 else:
-                    base_domain.append(('expected_arrival_date', '<', f"{filters.get('year', fields.Date.today().year)}-{month_num+1:02d}-01"))
+                    end_date = fields.Date.to_string(date(year, month_num + 1, 1))
+                    
+                base_domain.append(('create_date', '>=', start_date))
+                base_domain.append(('create_date', '<', end_date))
+            elif filters.get('year') and filters['year'] != 'All':
+                # If only year is specified, create date range for entire year
+                start_date = fields.Date.to_string(date(year, 1, 1))
+                end_date = fields.Date.to_string(date(year + 1, 1, 1))
+                base_domain.append(('create_date', '>=', start_date))
+                base_domain.append(('create_date', '<', end_date))
         
         today = fields.Date.today()
         tomorrow = today + timedelta(days=1)
@@ -281,17 +305,17 @@ class WarehouseInventory(models.Model):
         
         # These might need custom domain logic based on your specific requirements
         open_osd_inventory = self.search_count(base_domain + [
-            # Add specific conditions for OS&D inventory
-            # For example: Items with discrepancies
             ('inventory_status', '=', 'waiting')
         ])
         
         displached_items = self.search_count(base_domain + [
-            # Add specific conditions for displaced items
-            # For example: Items in a temporary location
             ('warehouse_id', '!=', False),
             ('inventory_status', '=', 'allocated')
-            # Add more conditions specific to your definition of "displaced"
+        ])
+        
+        # Add a count for dispatched items
+        dispatched_items = self.search_count(base_domain + [
+            ('inventory_status', '=', 'done')
         ])
         
         return {
@@ -303,6 +327,7 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displachedItems': displached_items
+            'displachedItems': displached_items,
+            'dispatchedItems': dispatched_items
         }
         
