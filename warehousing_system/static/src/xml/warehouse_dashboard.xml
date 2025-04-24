@@ -1,201 +1,164 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="warehousing_system.WarehouseDashboard" owl="1">
-        <div class="warehouse-dashboard">
-            <h1 class="mb-4">Warehouse Inventory Dashboard</h1>
-            
-            <!-- Filter controls -->
-            <div class="dashboard-filters">
-                <div class="row mb-4">
-                    <div class="col">
-                        <label>Client</label>
-                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'client')">
-                            <option selected="selected">Saipem</option>
-                            <option>Client 2</option>
-                            <option>Client 3</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label>File Type</label>
-                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
-                            <option selected="selected">Warehouse</option>
-                            <option>Purchase</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label>Project No.</label>
-                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'projectNo')">
-                            <option selected="selected">PR02345</option>
-                            <option>PR02346</option>
-                            <option>PR02347</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label>Month</label>
-                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
-                            <option selected="selected">Jan</option>
-                            <option>Feb</option>
-                            <option>Mar</option>
-                            <option>Apr</option>
-                            <option>May</option>
-                            <option>Jun</option>
-                            <option>Jul</option>
-                            <option>Aug</option>
-                            <option>Sep</option>
-                            <option>Oct</option>
-                            <option>Nov</option>
-                            <option>Dec</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label>Year</label>
-                        <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'year')">
-                            <option selected="selected">All</option>
-                            <option>2025</option>
-                            <option>2024</option>
-                            <option>2023</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Dashboard cards -->
-            <div class="dashboard-cards">
-                <div class="row">
-                    <!-- Card 1: Inventory Items Waiting for Info -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft']], 'Inventory Items Waiting for Info')">
-                            <div class="card-icon">
-                                <i class="fa fa-info-circle"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.waitingForInfo"/></div>
-                            <div class="card-title">Inventory Items Waiting for Info</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 2: Inventory Items Expected Tomorrow -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', [['expected_arrival_date', '=', 'tomorrow']], 'Inventory Items Expected Tomorrow')">
-                            <div class="card-icon">
-                                <i class="fa fa-hourglass-half"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
-                            <div class="card-title">Inventory Items Expected Tomorrow</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 3: Inventory Items expected TODAY -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_expected_today', [['expected_arrival_date', '=', 'today']], 'Inventory Items expected TODAY')">
-                            <div class="card-icon">
-                                <i class="fa fa-clock-o"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
-                            <div class="card-title">Inventory Items expected TODAY</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 4: Items to be Put in Stock -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', [['inventory_status', '=', 'arrived']], 'Items to be Put in Stock')">
-                            <div class="card-icon">
-                                <i class="fa fa-cart-plus"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.toBePutInStock"/></div>
-                            <div class="card-title">Items to be Put in Stock</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 5: Inventory Items without allocated storage section -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', false], ['inventory_status', 'not in', ['draft', 'cancelled']]], 'Inventory Items without allocated storage section')">
-                            <div class="card-icon">
-                                <i class="fa fa-ban"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.withoutAllocatedStorage"/></div>
-                            <div class="card-title">Inventory Items without allocated storage section</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 6: Labels to be printed -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', [], 'Labels to be printed')">
-                            <div class="card-icon">
-                                <i class="fa fa-print"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.labelsToBePrinted"/></div>
-                            <div class="card-title">Labels to be printed</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 7: Inventory Items longer than 90 days in stock -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', [], 'Inventory Items longer than 90 days in stock')">
-                            <div class="card-icon">
-                                <i class="fa fa-ban"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.longerThan90Days"/></div>
-                            <div class="card-title">Inventory Items longer than 90 days in stock</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 8: Open OS&D inventory items in stock -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [], 'Open OS&amp;D inventory items in stock')">
-                            <div class="card-icon">
-                                <i class="fa fa-unlock-alt"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.openOSDInventory"/></div>
-                            <div class="card-title">Open OS&amp;D inventory items in stock</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 9: Inventory items that are displaced -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [], 'Inventory items that are displaced')">
-                            <div class="card-icon">
-                                <i class="fa fa-file-text-o "></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.displachedItems"/></div>
-                            <div class="card-title">Inventory items Waiting for Info</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 10: Duplicate of card 3 with hard hat icon (as shown in the image) -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_expected_today_alt', [['expected_arrival_date', '=', 'today']], 'Inventory Items Expected TODAY')">
-                            <div class="card-icon">
-                                <i class="fa fa-cloud"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
-                            <div class="card-title">Inventory Items Expected Tomorrow</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 11: Duplicate of card 2 with hard hat icon (as shown in the image) -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [['expected_arrival_date', '=', 'tomorrow']], 'Inventory Items Expected Tomorrow')">
-                            <div class="card-icon">
-                                <i class="fa fa-cloud"></i>
-                            </div>
-                            <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
-                            <div class="card-title">Inventory Items Expected TODAY</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Card 12: Placeholder for a potential 12th card if needed -->
-                    <div class="col-md-3">
-                        <div class="warehouse-card red-card" t-on-click="() => this.onCardClick('action_view_placeholder', [], 'Placeholder')">
-                            <div class="card-icon">
-                                <i class="fa fa-truck"></i>
-                            </div>
-                            <div class="card-count">0</div>
-                            <div class="card-title">Inventory items that are dispatched</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <t t-name="warehousing_system.WarehouseDashboard" owl="1">
+    <div class="warehouse-dashboard container-fluid px-4">
+      <h1 class="mb-4">Warehouse Inventory Dashboard</h1>
+
+      <!-- Filter controls (unchanged) -->
+      <div class="dashboard-filters mb-4">
+        <div class="row">
+          <div class="col">
+            <label>Client</label>
+            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'client')">
+              <option selected="selected">Saipem</option>
+              <option>Client 2</option>
+              <option>Client 3</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>File Type</label>
+            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
+              <option selected="selected">Warehouse</option>
+              <option>Purchase</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Project No.</label>
+            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'projectNo')">
+              <option selected="selected">PR02345</option>
+              <option>PR02346</option>
+              <option>PR02347</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Month</label>
+            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
+              <option selected="selected">Jan</option>
+              <option>Feb</option>
+              <option>Mar</option>
+              <option>Apr</option>
+              <option>May</option>
+              <option>Jun</option>
+              <option>Jul</option>
+              <option>Aug</option>
+              <option>Sep</option>
+              <option>Oct</option>
+              <option>Nov</option>
+              <option>Dec</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Year</label>
+            <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'year')">
+              <option selected="selected">All</option>
+              <option>2025</option>
+              <option>2024</option>
+              <option>2023</option>
+            </select>
+          </div>
         </div>
-    </t>
+      </div>
+
+      <!-- Dashboard cards -->
+      <div class="dashboard-cards">
+        <!-- Card 1 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft']], 'Inventory Items Waiting for Info')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-info-circle"/></div>
+            <div class="card-count"><t t-esc="state.stats.waitingForInfo"/></div>
+            <div class="card-title">Inventory Items Waiting for Info</div>
+          </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', [['expected_arrival_date', '=', 'tomorrow']], 'Inventory Items Expected Tomorrow')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
+            <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
+            <div class="card-title">Inventory Items Expected Tomorrow</div>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', [['expected_arrival_date', '=', 'today']], 'Inventory Items Expected Today')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-clock-o"/></div>
+            <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
+            <div class="card-title">Inventory Items Expected Today</div>
+          </div>
+        </div>
+        <!-- Card 4 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', [['inventory_status', '=', 'arrived']], 'Items to be Put in Stock')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-cart-plus"/></div>
+            <div class="card-count"><t t-esc="state.stats.toBePutInStock"/></div>
+            <div class="card-title">Items to be Put in Stock</div>
+          </div>
+        </div>
+        <!-- Card 5 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', False], ['inventory_status', 'not in', ['draft','cancelled']]], 'Inventory Items without Allocated Storage')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-ban"/></div>
+            <div class="card-count"><t t-esc="state.stats.withoutAllocatedStorage"/></div>
+            <div class="card-title">Inventory Items without Allocated Storage</div>
+          </div>
+        </div>
+        <!-- Card 6 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', [], 'Labels to be Printed')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-print"/></div>
+            <div class="card-count"><t t-esc="state.stats.labelsToBePrinted"/></div>
+            <div class="card-title">Labels to be Printed</div>
+          </div>
+        </div>
+        <!-- Card 7 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', [], 'Inventory Items >90 Days in Stock')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
+            <div class="card-count"><t t-esc="state.stats.longerThan90Days"/></div>
+            <div class="card-title">Inventory Items >90 Days in Stock</div>
+          </div>
+        </div>
+        <!-- Card 8 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [], 'Open OS&amp;D Inventory in Stock')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-unlock-alt"/></div>
+            <div class="card-count"><t t-esc="state.stats.openOSDInventory"/></div>
+            <div class="card-title">Open OS&amp;D Inventory in Stock</div>
+          </div>
+        </div>
+        <!-- Card 9 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [], 'Inventory Items Displaced')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-truck-moving"/></div>
+            <div class="card-count"><t t-esc="state.stats.displachedItems"/></div>
+            <div class="card-title">Inventory Items Displaced</div>
+          </div>
+        </div>
+        <!-- Card 10 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today_alt', [['expected_arrival_date','=', 'today']], 'Inventory Items Expected Today (Alt)')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-hard-hat"/></div>
+            <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
+            <div class="card-title">Inventory Items Expected Today</div>
+          </div>
+        </div>
+        <!-- Card 11 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [['expected_arrival_date','=', 'tomorrow']], 'Inventory Items Expected Tomorrow (Alt)')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-hard-hat"/></div>
+            <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
+            <div class="card-title">Inventory Items Expected Tomorrow</div>
+          </div>
+        </div>
+        <!-- Card 12 -->
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', [], 'Inventory Items Dispatched')">
+          <div class="warehouse-card red-card">
+            <div class="card-icon"><i class="fa fa-truck"/></div>
+            <div class="card-count"><t t-esc="state.stats.dispatchedItems"/></div>
+            <div class="card-title">Inventory Items Dispatched</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </t>
 </templates>

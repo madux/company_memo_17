@@ -1,102 +1,45 @@
-.warehouse-dashboard {
+.warehouse-dashboard.container-fluid {
+    /* Optional: cap the dashboard width so you don't span the entire screen */
+    max-width: 1200px;
+    margin: auto;
     padding: 1.5rem;
-    background-color: #f9f9f9;
-    
-    h1 {
-        font-size: 1.75rem;
-        color: #333;
-        margin-bottom: 1.5rem;
+  }
+  
+  .dashboard-cards {
+    display: flex;
+    flex-wrap: wrap;
+    /* negative half-gutter to cancel out first/last column padding */
+    margin: -0.75rem;
+  }
+  
+  .col-card {
+    /* same total width as your HRPMS cards: 288px + 2×0.75rem gutter */
+    flex: 0 0 288px;
+    max-width: 288px;
+    /* match HRPMS horizontal gutter (~12px = 0.75rem) */
+    padding: 0.75rem;
+    box-sizing: border-box;
+  }
+  
+  .warehouse-card {
+    background-color: #f8dada;
+    border: 1px solid #f1c3c3;
+    border-radius: 8px;
+    padding: 1rem;
+    /* same inner height you liked */
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+  
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
-    
-    .dashboard-filters {
-        background-color: white;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        
-        label {
-            font-weight: 500;
-            color: #555;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-    }
-    
-    .warehouse-card {
-        position: relative;
-        padding: 1.25rem;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        min-height: 130px;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        
-        &:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        &.red-card {
-            background-color: #f8dada;
-            border: 1px solid #f1c3c3;
-            
-            .card-icon {
-                color: #c02c2c;
-            }
-            
-            .card-count {
-                color: #c02c2c;
-            }
-            
-            .card-title {
-                color: #9a2222;
-            }
-        }
-        
-        .card-icon {
-            font-size: 1.75rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .card-count {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-        
-        .card-title {
-            font-size: 0.9rem;
-            line-height: 1.3;
-        }
-    }
-}
-
-// Responsive adjustments
-@media (max-width: 768px) {
-    .warehouse-dashboard {
-        .dashboard-filters {
-            .row {
-                flex-wrap: wrap;
-            }
-            .col {
-                flex: 0 0 50%;
-                max-width: 50%;
-                margin-bottom: 1rem;
-            }
-        }
-    }
-}
-
-@media (max-width: 576px) {
-    .warehouse-dashboard {
-        .dashboard-filters {
-            .col {
-                flex: 0 0 100%;
-                max-width: 100%;
-            }
-        }
-    }
-}
+  
+    .card-icon { font-size: 1.75rem; color: #c02c2c; }
+    .card-count { font-size: 2rem; font-weight: bold; color: #c02c2c; }
+    .card-title { font-size: 0.9rem; color: #9a2222; }
+  }
+  
