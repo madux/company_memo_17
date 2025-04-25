@@ -1,5 +1,5 @@
 from odoo import api, fields, models
-from datetime import timedelta
+from datetime import date, timedelta
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
@@ -19,16 +19,15 @@ class StockMove(models.Model):
     ], string="Custom Unit of Measure")
     
     
-    class PickingItem(models.Model):
-        _name = 'stock.picking.item'
-        _description = "One line of items on our Inventory Creation Form"
+    # class PickingItem(models.Model):
+    #     _name = 'stock.picking.item'
+    #     _description = "One line of items on our Inventory Creation Form"
 
-        picking_id = fields.Many2one('stock.picking', ondelete='cascade')
-        product_id = fields.Many2one('product.product', required=True)
-        description = fields.Char(String='Description')
-        qty = fields.Integer(String='Quantity',default=0)
-        customer_reference = fields.Char(String="Customer Reference")
-
+    #     picking_id = fields.Many2one('stock.picking', ondelete='cascade')
+    #     product_id = fields.Many2one('product.product', required=True)
+    #     description = fields.Char(String='Description')
+    #     qty = fields.Integer(String='Quantity',default=0)
+    #     customer_reference = fields.Char(String="Customer Reference")
 
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
@@ -71,6 +70,7 @@ class WarehouseInventory(models.Model):
         string="Waybill Number (RL/AWB)",
         help="Receiving Log / Air Waybill number associated with the delivery."
     )
+    bl_awb_number     = fields.Char(string="BL / AWB Number")
     expected_arrival_date = fields.Date(
         string="Expected Arrival Date",
         tracking=True
@@ -88,9 +88,8 @@ class WarehouseInventory(models.Model):
     )
     customer_id = fields.Many2one(
         'res.partner',
-        string="End Customer / Requestor",
-        domain=[('customer_rank', '>', 0)],
-        help="The ultimate customer or internal department requesting the items."
+        string="Customer",
+        help="The ultimate customer."
     )
     po_line_ids = fields.One2many(
         'purchase.order.line',
@@ -111,101 +110,64 @@ class WarehouseInventory(models.Model):
     )
 
     
-    item_line_ids = fields.One2many(
-        'stock.picking.item', 'picking_id',
-        string="Item Details (per item)",
-        readonly=False, copy=False,
-    )
+    # item_line_ids = fields.One2many(
+    #     'stock.picking.item', 'picking_id',
+    #     string="Item Details (per item)",
+    #     readonly=False, copy=False,
+    # )
 
+    
     @api.onchange('financial_id')
     def _onchange_financial_id_for_items(self):
         for pick in self:
-            pick.item_line_ids = [(5,0,0)]
-            if pick.financial_id:
-                lines = []
-                for wb in pick.financial_id.waybill_ids:
-                    lines.append((0,0,{
-                        'product_id': wb.product_id.id,
-                        'description':  wb.waybill_desc or '',
-                        'qty': wb.quantity or 0
-                    }))
-                pick.item_line_ids = lines
-    
+            pick.move_ids_without_package = [(5, 0, 0)]
+            if not pick.financial_id:
+                continue
+            src_loc = pick.location_id.id \
+                      or pick.picking_type_id.default_location_src_id.id
+            dst_loc = pick.location_dest_id.id \
+                      or pick.picking_type_id.default_location_dest_id.id
+            new_moves = []
+            for wb in pick.financial_id.waybill_ids:
+                uom = self.env['uom.uom'].search(
+                    [('name', '=', wb.uom)], limit=1
+                )
+                new_moves.append((0, 0, {
+                    'name': wb.product_id.display_name,
+                    'product_id': wb.product_id.id,
+                    'product_qty': wb.quantity or 0.0,
+                    'product_uom': uom.id or wb.product_id.uom_id.id or False,
+                    'location_id': src_loc,
+                    'location_dest_id': dst_loc,
+                    'description_picking': wb.waybill_desc or '',
+                }))
+            pick.move_ids_without_package = new_moves
+
     inbound_picking_id = fields.Many2one(
         'stock.picking',
         string="Related Inbound Shipment",
         domain=[('picking_type_id.code', '=', 'incoming')],
         help="Select the receipt operation that brought these goods into stock."
     )
-    
-    ####### Added this fields to allw this module work
-    
-    # user_owned_cash_advance_ids = fields.Many2many(
-    #     'memo.model', 
-    #     'user_owned_cash_warehouse_advance_rel',
-    #     'user_owned_cash_warehouse_advance_id',
-    #     'memo_id', string="User owned cash helpdesk advances", store=False)
-    
-    # approver_ids = fields.Many2many(
-    #     'hr.employee',
-    #     'memo_model_warehouse_employee_rel',
-    #     'memo_id',
-    #     'hr_employee_id',
-    #     string='Approvers',
-    # )
-
-    # invoice_ids = fields.Many2many(
-    #     'account.move',
-    #     'memo_invoice_warehouse_rel',
-    #     'memo_id',
-    #     'invoice_id',
-    #     string='Invoices',
-    #     store=True,
-    #     domain="[('type', 'in', ['in_invoice', 'in_receipt']), ('state', '!=', 'cancel')]",
-    # )
-
-    # partner_ids = fields.Many2many(
-    #     'res.partner',
-    #     'memo_res_warehouse_partner_rel',
-    #     'memo_id',
-    #     'partner_id',
-    #     string='Recipients',
-    # )
-
-    # attachment_ids = fields.Many2many(
-    #     'ir.attachment',
-    #     'memo_ir_attachment_warehouse_rel',
-    #     'memo_id',
-    #     'attachment_id',
-    #     string='Attachments',
-    #     store=True,
-    #     domain="[('res_model', '=', 'memo.model')]",
-    # )
-
-    # memo_sub_stage_ids = fields.Many2many(
-    #     'memo.sub.stage',
-    #     'memo_sub_stage_warehouse_rel',
-    #     'memo_id',
-    #     'sub_stage_id',
-    #     string='Sub‑Stages',
-    #     store=True,
-    # )
 
 
-    def action_pre_allocate(self):
+    def action_confirm(self):
         for record in self:
-            #logic here
             record.inventory_status = 'allocated'
+        return True
+    
+    def button_validate(self):
+        for record in self:
+            record.inventory_status = 'done'
         return True
 
 
-    # Onchange to populate supplier PO from financial_id (Purchase Order)
     @api.onchange('financial_id')
     def _onchange_financial_id(self):
         if self.financial_id:
             self.supplier_po_number = self.financial_id.name or ''
-            if not self.receiving_supplier_id and self.financial_id.partner_id:
-                 self.receiving_supplier_id = self.financial_id.partner_id
+            if not self.receiving_supplier_id and self.financial_id.client_id:
+                 self.receiving_supplier_id = self.financial_id.client_id
                  
     
     @api.model
@@ -225,31 +187,24 @@ class WarehouseInventory(models.Model):
         if not filters:
             filters = {}
             
-        # Base domain for all queries
         base_domain = []
         
-        # Apply filters if provided
         if filters.get('client') and filters['client'].strip():
-            # Search by customer name (partial match)
             base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
         
-        # Filter by inventory status
         if filters.get('fileType') and filters['fileType'] != 'All':
             base_domain.append(('inventory_status', '=', filters['fileType']))
         
-        # Filter by supplier PO number
         if filters.get('projectNo') and filters['projectNo'] != 'All':
             base_domain.append(('supplier_po_number', '=', filters['projectNo']))
         
-        # Handle date filters (month and year)
         if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-            # Convert month name to number (1-12)
+
             month_mapping = {
                 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
             }
             
-            # Determine year to use
             year = fields.Date.today().year
             if filters.get('year') and filters['year'] != 'All':
                 try:
@@ -257,12 +212,10 @@ class WarehouseInventory(models.Model):
                 except (ValueError, TypeError):
                     pass
             
-            # If month is specified, create date range for that month
             if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
                 month_num = month_mapping[filters['month']]
                 start_date = fields.Date.to_string(date(year, month_num, 1))
                 
-                # Calculate end date (first day of next month)
                 if month_num == 12:
                     end_date = fields.Date.to_string(date(year + 1, 1, 1))
                 else:
@@ -271,7 +224,6 @@ class WarehouseInventory(models.Model):
                 base_domain.append(('create_date', '>=', start_date))
                 base_domain.append(('create_date', '<', end_date))
             elif filters.get('year') and filters['year'] != 'All':
-                # If only year is specified, create date range for entire year
                 start_date = fields.Date.to_string(date(year, 1, 1))
                 end_date = fields.Date.to_string(date(year + 1, 1, 1))
                 base_domain.append(('create_date', '>=', start_date))
@@ -281,7 +233,6 @@ class WarehouseInventory(models.Model):
         tomorrow = today + timedelta(days=1)
         ninety_days_ago = today - timedelta(days=90)
         
-        # Get counts for different dashboard tiles
         waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft')])
         expected_tomorrow = self.search_count(base_domain + [('expected_arrival_date', '=', tomorrow)])
         expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today)])
@@ -291,10 +242,8 @@ class WarehouseInventory(models.Model):
             ('inventory_status', 'not in', ['draft', 'cancelled'])
         ])
         
-        # For these you may need to customize based on your business logic
         labels_to_be_printed = self.search_count(base_domain + [
             ('inventory_status', 'in', ['arrived', 'allocated']),
-            # Add any other condition that indicates labels need to be printed
         ])
         
         longer_than_90_days = self.search_count(base_domain + [
@@ -303,7 +252,6 @@ class WarehouseInventory(models.Model):
             ('inventory_status', 'not in', ['done', 'cancelled'])
         ])
         
-        # These might need custom domain logic based on your specific requirements
         open_osd_inventory = self.search_count(base_domain + [
             ('inventory_status', '=', 'waiting')
         ])
@@ -313,7 +261,6 @@ class WarehouseInventory(models.Model):
             ('inventory_status', '=', 'allocated')
         ])
         
-        # Add a count for dispatched items
         dispatched_items = self.search_count(base_domain + [
             ('inventory_status', '=', 'done')
         ])

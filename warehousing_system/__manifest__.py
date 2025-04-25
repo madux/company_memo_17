@@ -8,7 +8,7 @@
     'depends': ['base', 'stock', 'purchase', 'web', 'company_memo', 'mail', 'product'],
     'author': '',
     'data': [ 
-        'security/ir.model.access.csv',
+        # 'security/ir.model.access.csv',
         'data/warehouse_stage_data.xml',
         'data/memo_type_warehouse.xml',
         'views/financial_file_views.xml',

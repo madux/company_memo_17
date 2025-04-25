@@ -9,12 +9,11 @@ class WarehouseDashboard extends Component {
         this.actionService = useService("action");
         this.rpc = useService("rpc");
         
-        // Initialize state with default values
         this.state = useState({
             filters: {
-                client: '',  // Empty string for text input
+                client: '',
                 fileType: 'All',
-                projectNo: '',  // Empty string for text input
+                projectNo: '',
                 month: 'All',
                 year: 'All'
             },
@@ -48,7 +47,6 @@ class WarehouseDashboard extends Component {
 
     async fetchDashboardData() {
         try {
-            // Prepare filter data for backend
             const filterData = {
                 client: this.state.filters.client,
                 fileType: this.state.filters.fileType,
@@ -57,14 +55,12 @@ class WarehouseDashboard extends Component {
                 year: this.state.filters.year
             };
             
-            // Fetch all stats in a single call for better performance
             const stats = await this.orm.call(
                 'stock.picking',
                 'get_warehouse_dashboard_data',
                 [filterData]
             );
            
-            // Update state with fetched data
             this.state.stats = stats || {
                 waitingForInfo: 0,
                 expectedTomorrow: 0,
@@ -87,13 +83,11 @@ class WarehouseDashboard extends Component {
         this.fetchDashboardData();
     }
 
-    // For text input we need a separate handler with debounce
     onClientInputChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
         this._debouncedFetch();
     }
 
-    // Simple debounce implementation to avoid too many API calls while typing
     _debouncedFetch() {
         if (this._searchTimeout) {
             clearTimeout(this._searchTimeout);
@@ -103,26 +97,21 @@ class WarehouseDashboard extends Component {
         }, 500);
     }
 
-    // Helper method to generate domain for card clicks based on current filters
     getDomainWithFilters(additionalDomain = []) {
         let domain = [...additionalDomain];
         
-        // Add client filter (customer_id.name) if not empty
         if (this.state.filters.client && this.state.filters.client.trim() !== '') {
             domain.push(['customer_id.name', 'ilike', this.state.filters.client.trim()]);
         }
         
-        // Add file type filter (inventory_status)
         if (this.state.filters.fileType !== 'All') {
             domain.push(['inventory_status', '=', this.state.filters.fileType]);
         }
         
-        // Add project number filter (supplier_po_number)
         if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
             domain.push(['supplier_po_number', 'ilike', this.state.filters.projectNo.trim()]);
         }
         
-        // Add date filters (month and year)
         if (this.state.filters.month !== 'All' || this.state.filters.year !== 'All') {
             const monthMapping = {
                 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
@@ -152,7 +141,6 @@ class WarehouseDashboard extends Component {
 
     async onCardClick(actionName, domainAddition, title) {
         try {
-            // Combine card-specific domain with filter domain
             const domain = this.getDomainWithFilters(domainAddition);
             
             await this.actionService.doAction({
@@ -162,7 +150,6 @@ class WarehouseDashboard extends Component {
                 domain: domain,
                 name: title,
                 context: {
-                    // Include current filters in context
                     search_default_client: this.state.filters.client || false,
                     search_default_fileType: this.state.filters.fileType !== 'All' ? this.state.filters.fileType : false,
                     search_default_projectNo: this.state.filters.projectNo || false,
