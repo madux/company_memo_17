@@ -6,7 +6,7 @@
         <field name="model">stock.picking</field>
         <field name="priority" eval="20"/>
         <field name="arch" type="xml">
-          <tree string="Warehouse Inventory Receipts">
+          <tree string="Warehouse Inventory">
             <field name="name"/>
             <field name="financial_id" context="{'show_address': False}"/>
             <field name="warehouse_id"/>
@@ -19,7 +19,7 @@
     </record>
 
     <record id="view_warehouse_inventory_form" model="ir.ui.view">
-        <field name="name">stock.picking.warehouse.form.custom</field>
+        <field name="name">stock.picking.warehouse.form</field>
         <field name="model">stock.picking</field>
         <field name="priority" eval="20"/>
         <field name="arch" type="xml">
@@ -51,7 +51,7 @@
                         <button name="316" string="Return" invisible="state != 'done'" type="action" groups="base.group_user" data-hotkey="k"/>
                         <field name="inventory_status" widget="statusbar" />
                         <field name="state" widget="statusbar" invisible="1" statusbar_visible="draft,assigned,done"/>
-                        <!-- <field name="state" widget="statusbar" invisible="picking_type_code == 'incoming'" statusbar_visible="draft,confirmed,assigned,done"/> -->
+                        <field name="state" widget="statusbar" invisible="picking_type_code == 'incoming'" statusbar_visible="draft,confirmed,assigned,done"/>
                         <button name="action_cancel" invisible="state not in ('assigned', 'confirmed', 'draft', 'waiting')" string="Cancel" groups="base.group_user" type="object" confirm="Are you sure you want to cancel this transfer?" data-hotkey="x"/>
                     </header>
                     <div class="oe_button_box" name="button_box" invisible="1">
@@ -102,8 +102,8 @@
                             </div>
                             <field name="partner_id" nolabel="1" readonly="state in ['cancel', 'done']"/>
                             <field name="picking_type_id" options="{'no_open': True}" invisible="hide_picking_type" readonly="state != 'draft' and id" domain="context.get('restricted_picking_type_code') and [('code', '=', context.get('restricted_picking_type_code'))] or [(1,'=',1)]"/>
-                            <field name="inventory_status" placeholder="Select Inventory Status *" 
-                                   widget="selection" options="{'no_create': True}"/>
+                            <!-- <field name="inventory_status" placeholder="Select Inventory Status *" 
+                                   widget="selection" options="{'no_create': True}"/> -->
                             <!-- <field name="inbound_picking_id" placeholder="Related Inbound Shipment" 
                                    options="{'no_create': True}" domain="[('picking_type_code','=','incoming')]" /> -->
                             <field name="location_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
@@ -143,19 +143,9 @@
                         </group>
                     </group>
          
-                    <!-- Item Details -->
-                    <!-- <div class="o_horizontal_separator mt-4 mb-3">Item Details (per item)</div>
-                    <field name="item_line_ids">
-                        <tree editable="bottom">
-                            <field name="product_id"/>
-                            <field name="description" placeholder="Item Description *"/>
-                            <field name="customer_reference" placeholder="Customer Reference"/>
-                            <field name="qty"/>
-                        </tree>
-                    </field> -->
                     <notebook>
                         <page string="Operations" name="operations">
-                            <field name="move_ids_without_package" mode="tree,kanban" widget="stock_move_one2many" readonly="state == 'done' and is_locked" context="{'default_company_id': company_id, 'default_date': scheduled_date, 'default_date_deadline': date_deadline, 'picking_type_code': picking_type_code, 'default_picking_id': id, 'form_view_ref': 'stock.view_stock_move_operations', 'address_in_id': partner_id, 'default_picking_type_id': picking_type_id, 'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" add-label="Add a Product">
+                            <field name="move_ids_without_package" mode="tree,kanban" widget="stock_move_one2many" readonly="state == 'done' and is_locked" context="{'default_company_id': company_id, 'default_date': scheduled_date, 'default_date_deadline': date_deadline, 'picking_type_code': picking_type_code, 'default_picking_id': id, 'form_view_ref': 'warehousing_system.view_stock_move_operations_form_extend', 'address_in_id': partner_id, 'default_picking_type_id': picking_type_id, 'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" add-label="Add a Product">
                                 <tree decoration-muted="scrapped == True or state == 'cancel' or (state == 'done' and is_locked == True)" string="Stock Moves" editable="1">
                                     <field name="company_id" column_invisible="True"/>
                                     <field name="picking_id" column_invisible="True"/>
@@ -225,56 +215,14 @@
         </field>
     </record>
 
-    <!-- <record id="action_warehouse_inventory" model="ir.actions.act_window">
-        <field name="name">Warehouse Inventory</field>
-        <field name="res_model">memo.model</field>
-        <field name="view_mode">tree,form</field>
-        <field name="domain" eval="[( 'memo_type', '=', ref('warehousing_system.mtype_warehouse') )]"/>
-        <field name="context" eval="{
-            'default_memo_type': ref('warehousing_system.mtype_warehouse'),
-            'default_memo_setting_id': ref('warehousing_system.memo_config_warehouse'),
-        }"/>
-        <field name="view_ids" eval="[(5, 0, 0),
-            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_warehouse_inventory_tree')}),
-            (0, 0, {'view_mode': 'form', 'view_id': ref('view_warehouse_inventory_form')})]"/>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Create a new Warehouse Inventory Memo.
-            </p><p>
-                This section tracks items arriving at the warehouse before allocation or shipment.
-            </p>
-        </field>
-    </record> -->
-
-    <!-- <record id="action_warehouse_inventory" model="ir.actions.act_window">
-        <field name="name">Warehouse Inventory</field>
-        <field name="res_model">stock.picking</field>
-        <field name="view_mode">tree, form</field>
-        <field name="view_ids" eval="[(5, 0, 0),
-        (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
-        (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
-        <field name="domain">
-          []
-        </field>
-        <field name="target">current</field>
-      </record> -->
 
       <record id="action_warehouse_inventory" model="ir.actions.act_window">
-        <field name="name">Warehouse Inventory Receipts</field>
+        <field name="name">Warehouse Inventory</field>
         <field name="res_model">stock.picking</field>
-        <!-- we open the form first, then tree -->
         <field name="view_mode">form,tree</field>
-        <!-- default_form (the first one) -->
-        <field name="view_id" ref="warehousing_system.view_warehouse_inventory_tree"/>
-        <!-- full list of views -->
-        <field name="views" eval="[
-            (ref('warehousing_system.view_warehouse_inventory_form'), 'form'),
-            (ref('warehousing_system.view_warehouse_inventory_tree'), 'tree')
-          ]"/>
-        <!-- only incoming receipts -->
-        <field name="domain">[('picking_type_code','=','incoming')]</field>
-        <!-- set defaults on create if you like -->
-        <field name="context">{'default_picking_type_code': 'incoming'}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
       </record>
       
 

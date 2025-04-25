@@ -1,34 +1,6 @@
 from odoo import api, fields, models
 from datetime import date, timedelta
-
-class StockMove(models.Model):
-    _inherit = 'stock.move'
-
-    is_hazard_material = fields.Boolean(string="Hazard Material?")
-    intended_vessel = fields.Char(string="Intended Vessel")
-    custom_uom = fields.Selection([
-        ('4x2_pallet', "4x2 Pallet"),
-        ('4x4_pallet', "4x4 Pallet"),
-        ('air_conditioner', "Air Conditioner"),
-        ('angle_bar', "Angle Bar"),
-        ('bag', "Bag"),
-        ('container', "Container"),
-        ('cable', "Cable"),
-        ('bolt', "Bolt"),
-        ('boxes', "Boxes"),
-    ], string="Custom Unit of Measure")
     
-    
-    # class PickingItem(models.Model):
-    #     _name = 'stock.picking.item'
-    #     _description = "One line of items on our Inventory Creation Form"
-
-    #     picking_id = fields.Many2one('stock.picking', ondelete='cascade')
-    #     product_id = fields.Many2one('product.product', required=True)
-    #     description = fields.Char(String='Description')
-    #     qty = fields.Integer(String='Quantity',default=0)
-    #     customer_reference = fields.Char(String="Customer Reference")
-
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
 
@@ -110,13 +82,6 @@ class WarehouseInventory(models.Model):
     )
 
     
-    # item_line_ids = fields.One2many(
-    #     'stock.picking.item', 'picking_id',
-    #     string="Item Details (per item)",
-    #     readonly=False, copy=False,
-    # )
-
-    
     @api.onchange('financial_id')
     def _onchange_financial_id_for_items(self):
         for pick in self:
@@ -166,6 +131,7 @@ class WarehouseInventory(models.Model):
     def _onchange_financial_id(self):
         if self.financial_id:
             self.supplier_po_number = self.financial_id.name or ''
+            self.origin = self.financial_id.code
             if not self.receiving_supplier_id and self.financial_id.client_id:
                  self.receiving_supplier_id = self.financial_id.client_id
                  
