@@ -142,7 +142,6 @@ class WarehouseDashboard extends Component {
     async onCardClick(actionName, domainAddition, title) {
         try {
             const domain = this.getDomainWithFilters(domainAddition);
-            
             await this.actionService.doAction({
                 type: 'ir.actions.act_window',
                 res_model: 'stock.picking',

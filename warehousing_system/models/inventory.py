@@ -4,12 +4,11 @@ from datetime import date, timedelta
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
 
-
     financial_id = fields.Many2one(
         'memo.model',
         string="Financial File / PO",
         help="Refers to the Purchase Order associated with this inventory receipt.",
-        domain=[('memo_type.memo_key','=', 'warehouse')]
+        domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
     )
     warehouse_id = fields.Many2one(
         'stock.warehouse',
@@ -17,11 +16,10 @@ class WarehouseInventory(models.Model):
         help="Select the warehouse where the goods arrived or are expected."
     )
     inventory_status = fields.Selection(selection=[
-        ('draft', 'Draft'),
+        ('draft', "Draft"),
         ('arrived', "Arrived at Warehouse"),
         ('allocated', "Allocated"),
-        ('waiting', 'Waiting'),
-        ('done', 'Processed / Shipped'),
+        ('done', 'Completed'),
         ('cancelled', 'Cancelled')
     ], string="Inventory Status", default='draft', index=True, tracking=True)
     actual_date_of_arrival = fields.Date(
@@ -85,29 +83,36 @@ class WarehouseInventory(models.Model):
     @api.onchange('financial_id')
     def _onchange_financial_id_for_items(self):
         for pick in self:
-            pick.move_ids_without_package = [(5, 0, 0)]
-            if not pick.financial_id:
-                continue
-            src_loc = pick.location_id.id \
-                      or pick.picking_type_id.default_location_src_id.id
-            dst_loc = pick.location_dest_id.id \
-                      or pick.picking_type_id.default_location_dest_id.id
-            new_moves = []
-            for wb in pick.financial_id.waybill_ids:
-                uom = self.env['uom.uom'].search(
-                    [('name', '=', wb.uom)], limit=1
-                )
-                new_moves.append((0, 0, {
-                    'name': wb.product_id.display_name,
-                    'product_id': wb.product_id.id,
-                    'product_qty': wb.quantity or 0.0,
-                    'product_uom': uom.id or wb.product_id.uom_id.id or False,
-                    'location_id': src_loc,
-                    'location_dest_id': dst_loc,
-                    'description_picking': wb.waybill_desc or '',
-                }))
-            pick.move_ids_without_package = new_moves
-
+            if pick.financial_id:
+                self.supplier_po_number = self.financial_id.name or ''
+                self.origin = self.financial_id.code
+                if not self.receiving_supplier_id and self.financial_id.client_id:
+                    self.receiving_supplier_id = self.financial_id.client_id
+                pick.move_ids_without_package = [(5, 0, 0)]
+                src_loc = pick.location_id.id \
+                        or pick.picking_type_id.default_location_src_id.id
+                dst_loc = pick.location_dest_id.id \
+                        or pick.picking_type_id.default_location_dest_id.id
+                new_moves = []
+                for wb in pick.financial_id.waybill_ids:
+                    uom = self.env['uom.uom'].search(
+                        [('name', '=', wb.uom)], limit=1
+                    )
+                    new_moves.append((0, 0, {
+                        'name': wb.product_id.display_name,
+                        'product_id': wb.product_id.id,
+                        'product_uom_qty': wb.quantity or 0.0,
+                        'product_uom': uom.id or wb.product_id.uom_id.id or False,
+                        'location_id': src_loc,
+                        'location_dest_id': dst_loc,
+                        'description_picking': wb.waybill_desc or '',
+                    }))
+                pick.move_ids_without_package = new_moves
+                self.inventory_status = "arrived"
+            # else:
+            #     self.inventory_status = "arrived"
+            #     self.state = "draft"
+                
     inbound_picking_id = fields.Many2one(
         'stock.picking',
         string="Related Inbound Shipment",
@@ -115,27 +120,35 @@ class WarehouseInventory(models.Model):
         help="Select the receipt operation that brought these goods into stock."
     )
 
-
+    def button_financial_file(self):
+        view_id = self.env.ref('company_memo.memo_model_form_view_3').id
+        ret = {
+            'name': "Financial File",
+            'view_mode': 'form',
+            'view_id': view_id,
+            'view_type': 'form',
+            'res_model': 'memo.model',
+            'res_id': self.financial_id.id,
+            'type': 'ir.actions.act_window',
+            'target': 'new'
+            }
+        return ret
+    
     def action_confirm(self):
-        for record in self:
-            record.inventory_status = 'allocated'
-        return True
+        res = super(WarehouseInventory, self).action_confirm()
+        self.inventory_status = 'allocated'
+        return res
     
     def button_validate(self):
-        for record in self:
-            record.inventory_status = 'done'
-        return True
-
-
-    @api.onchange('financial_id')
-    def _onchange_financial_id(self):
-        if self.financial_id:
-            self.supplier_po_number = self.financial_id.name or ''
-            self.origin = self.financial_id.code
-            if not self.receiving_supplier_id and self.financial_id.client_id:
-                 self.receiving_supplier_id = self.financial_id.client_id
-                 
+        res = super(WarehouseInventory, self).button_validate()
+        self.inventory_status = 'done'
+        return res
     
+    def action_cancel(self):
+        res = super(WarehouseInventory, self).action_cancel()
+        self.inventory_status = 'cancelled'
+        return res
+                 
     @api.model
     def get_warehouse_dashboard_data(self, filters=None):
         """
