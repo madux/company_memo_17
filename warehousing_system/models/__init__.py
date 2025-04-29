@@ -1,2 +1,2 @@
 from . import inventory
-from . import stock_picking
+from . import stock_move

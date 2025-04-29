@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <record id="view_stock_move_operations_form_extend" model="ir.ui.view">
+      <field name="name">stock.move.operations.form.extend</field>
+      <field name="model">stock.move</field>
+      <field name="inherit_id" ref="stock.view_stock_move_operations"/>
+      <field name="arch" type="xml">
+        <xpath expr="//form/group[1]" position="replace">
+          <group name="item_details">
+            <group string="Item Dimensions and Value">
+              <field name="product_id" readonly="id or move_line_ids"/>
+              <field name="description_picking" string="Item Description"/>
+              <field name="length_mtr"/>
+              <field name="width_mtr"/>
+              <field name="height_mtr"/>
+              <field name="item_value"/>
+            </group>
+            <group string="Packaging and Weight">
+              <field name="restrict_partner_id" string="Customer Reference"/>
+              <field name="product_qty" string="Amount of Items per package"/>
+              <field name="product_uom_qty" string="Amount of Packages"/>
+              <field name="weight_per_item"/>
+              <field name="area_m2"/>
+              <field name="volume_m3"/>
+              <field name="area_chargeable"/>
+            </group>
+          </group>
+        </xpath>
+      </field>
+    </record>
+  </data>
+</odoo>

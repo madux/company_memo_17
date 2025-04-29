@@ -21,7 +21,7 @@ class MemoTransportWaybill(models.Model):
     waybill_desc = fields.Text(string='Waybill Description.')
     loaded_by = fields.Char(string='Loaded By')
     loaded_date = fields.Datetime(string='Load Date')
+    uom_id = fields.Many2one('uom.uom', string='UOM ID')
     uom = fields.Char(string='UOM')
-
 
     
