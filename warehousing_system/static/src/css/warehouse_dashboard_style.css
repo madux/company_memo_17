@@ -34,6 +34,7 @@ html, body {
   justify-content: space-between;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  position: relative;
 }
 .warehouse-card:hover {
   transform: translateY(-3px);
@@ -42,23 +43,21 @@ html, body {
 .warehouse-card .card-icon {
   font-size: 1.75rem;
   color: #c02c2c;
-  /* Added flex properties */
-  display: flex;
-  justify-content: center;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
 }
 .warehouse-card .card-count {
   font-size: 2rem;
   font-weight: bold;
   color: #c02c2c;
-  /* Center the count */
   text-align: center;
-  /* Add margin for spacing */
+  margin-top: 0.5rem;
   margin-bottom: 0.5rem;
 }
 .warehouse-card .card-title {
   font-size: 0.9rem;
   color: #9a2222;
-  /* Center the title */
   text-align: center;
 }
 @media (max-width: 768px) {
