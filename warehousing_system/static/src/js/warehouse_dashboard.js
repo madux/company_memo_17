@@ -97,12 +97,8 @@ class WarehouseDashboard extends Component {
         }
     }
     
+    
     onFilterChange(event, filterName) {
-        this.state.filters[filterName] = event.target.value;
-        this.fetchDashboardData();
-    }
-
-    onClientInputChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
         this._debouncedFetch();
     }
@@ -119,7 +115,7 @@ class WarehouseDashboard extends Component {
     getDomainWithFilters(additionalDomain = []) {
         let domain = [...additionalDomain];
         
-        if (this.state.filters.fileType === 'warehouse') { // Using strict equality for consistency
+        if (this.state.filters.fileType === 'warehouse') {
             domain.push(['memo_project_type', '=', this.state.filters.fileType]);
             if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
                 domain.push(['origin', 'ilike', this.state.filters.projectNo.trim()]);
