@@ -8,23 +8,22 @@ class WarehouseDashboard extends Component {
         this.orm = useService("orm");
         this.actionService = useService("action");
         this.rpc = useService("rpc");
+        this.notificationService = useService("notification");
         
         this.state = useState({
             filters: {
                 client: '',
-                fileType: 'All',
+                fileType: 'warehouse',
                 projectNo: '',
                 month: 'All',
                 year: 'All'
             },
             statusOptions: [
-                { id: 'All', name: 'All' },
-                { id: 'draft', name: 'Draft' },
-                { id: 'arrived', name: 'Arrived at Warehouse' },
-                { id: 'allocated', name: 'Allocated' },
-                { id: 'waiting', name: 'Waiting' },
-                { id: 'done', name: 'Processed / Shipped' },
-                { id: 'cancelled', name: 'Cancelled' }
+                { id: 'warehouse', name: 'WAREHOUSING' },
+                { id: 'transport', name: 'TRANSPORT' },
+                { id: 'travel', name: 'TRAVEL' },
+                { id: 'agency', name: 'AGENCY' },
+                { id: 'cfwd', name: 'CFWD' }
             ],
             stats: {
                 waitingForInfo: 0,
@@ -45,19 +44,15 @@ class WarehouseDashboard extends Component {
         });
         
         onMounted(() => {
-            // Ensure proper layout rendering after component is mounted
             this._adjustLayout();
             
-            // Add resize listener for responsive adjustments
             window.addEventListener('resize', this._adjustLayout);
         });
     }
     
     _adjustLayout() {
-        // Force recalculation of layout after render
         const dashboard = document.querySelector('.warehouse-dashboard');
         if (dashboard) {
-            // Trigger browser reflow
             void dashboard.offsetWidth;
         }
     }
@@ -92,6 +87,13 @@ class WarehouseDashboard extends Component {
             };
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+            this.notificationService.add(
+                "Failed to fetch dashboard data. Please try again.",
+                {
+                    type: "warning",
+                    title: "Dashboard Error",
+                }
+            );
         }
     }
     
@@ -117,16 +119,25 @@ class WarehouseDashboard extends Component {
     getDomainWithFilters(additionalDomain = []) {
         let domain = [...additionalDomain];
         
-        if (this.state.filters.client && this.state.filters.client.trim() !== '') {
-            domain.push(['customer_id.name', 'ilike', this.state.filters.client.trim()]);
+        if (this.state.filters.fileType === 'warehouse') { // Using strict equality for consistency
+            domain.push(['memo_project_type', '=', this.state.filters.fileType]);
+            if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
+                domain.push(['origin', 'ilike', this.state.filters.projectNo.trim()]);
+            }
+
+            if (this.state.filters.client && this.state.filters.client.trim() !== '') {
+                domain.push(['customer_id.name', 'ilike', this.state.filters.client.trim()]);
+            }
         }
-        
-        if (this.state.filters.fileType !== 'All') {
-            domain.push(['inventory_status', '=', this.state.filters.fileType]);
-        }
-        
-        if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
-            domain.push(['supplier_po_number', 'ilike', this.state.filters.projectNo.trim()]);
+        else {
+            domain.push(['memo_project_type', '=', this.state.filters.fileType]);
+            if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
+                domain.push(['code', 'ilike', this.state.filters.projectNo.trim()]);
+            }
+
+            if (this.state.filters.client && this.state.filters.client.trim() !== '') {
+                domain.push(['client_id.name', 'ilike', this.state.filters.client.trim()]);
+            }
         }
         
         if (this.state.filters.month !== 'All' || this.state.filters.year !== 'All') {
@@ -167,7 +178,7 @@ class WarehouseDashboard extends Component {
                 name: title,
                 context: {
                     search_default_client: this.state.filters.client || false,
-                    search_default_fileType: this.state.filters.fileType !== 'All' ? this.state.filters.fileType : false,
+                    search_default_fileType: this.state.filters.fileType !== 'warehouse' ? this.state.filters.fileType : false,
                     search_default_projectNo: this.state.filters.projectNo || false,
                     search_default_month: this.state.filters.month !== 'All' ? this.state.filters.month : false,
                     search_default_year: this.state.filters.year !== 'All' ? this.state.filters.year : false
@@ -175,7 +186,6 @@ class WarehouseDashboard extends Component {
             });
         } catch (error) {
             console.error("Failed to execute action:", error);
-            // Use the correct notification method - add instead of notify
             this.notificationService.add(
                 "Failed to open view. Please try again.",
                 {
@@ -186,14 +196,17 @@ class WarehouseDashboard extends Component {
         }
     }
     
-    // Clean up method to remove event listener
     willUnmount() {
         window.removeEventListener('resize', this._adjustLayout);
     }
 }
 
 WarehouseDashboard.template = 'warehousing_system.WarehouseDashboard';
-WarehouseDashboard.props = {};
+WarehouseDashboard.props = {
+    action: { type: Object, optional: true },
+    actionId: { type: [Number, String], optional: true },
+    className: { type: String, optional: true },
+};
 
 registry.category("actions").add("warehouse_inventory_dashboard", WarehouseDashboard);
 
