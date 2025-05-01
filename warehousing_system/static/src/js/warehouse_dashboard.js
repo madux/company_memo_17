@@ -116,7 +116,6 @@ class WarehouseDashboard extends Component {
         let domain = [...additionalDomain];
         
         if (this.state.filters.fileType === 'warehouse') {
-            domain.push(['memo_project_type', '=', this.state.filters.fileType]);
             if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
                 domain.push(['origin', 'ilike', this.state.filters.projectNo.trim()]);
             }
@@ -166,20 +165,23 @@ class WarehouseDashboard extends Component {
     async onCardClick(actionName, domainAddition, title) {
         try {
             const domain = this.getDomainWithFilters(domainAddition);
-            await this.actionService.doAction({
-                type: 'ir.actions.act_window',
-                res_model: 'stock.picking',
-                view_mode: 'tree,form',
-                domain: domain,
-                name: title,
-                context: {
-                    search_default_client: this.state.filters.client || false,
-                    search_default_fileType: this.state.filters.fileType !== 'warehouse' ? this.state.filters.fileType : false,
-                    search_default_projectNo: this.state.filters.projectNo || false,
-                    search_default_month: this.state.filters.month !== 'All' ? this.state.filters.month : false,
-                    search_default_year: this.state.filters.year !== 'All' ? this.state.filters.year : false
-                }
-            });
+            // const domain = [['inventory_status', '=', 'arrived']]
+
+            const actionData = {
+                title: title,
+                domain: domain
+            };
+
+            const result = await this.orm.call(
+                'stock.picking',
+                'get_action',
+                [actionData]
+            );
+
+            if (result && result.action) {
+                await this.actionService.doAction(result.action);
+            }
+
         } catch (error) {
             console.error("Failed to execute action:", error);
             this.notificationService.add(
@@ -190,6 +192,8 @@ class WarehouseDashboard extends Component {
                 }
             );
         }
+
+        
     }
     
     willUnmount() {

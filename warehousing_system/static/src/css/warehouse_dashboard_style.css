@@ -46,6 +46,7 @@ html, body {
   position: absolute;
   top: 1rem;
   left: 1rem;
+  pointer-events: none;
 }
 .warehouse-card .card-count {
   font-size: 2rem;
