@@ -111,7 +111,7 @@
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
             <div class="card-count"><t t-esc="state.stats.longerThan90Days"/></div>
-            <div class="card-title">Inventory Items >90 Days in Stock</div>
+            <div class="card-title">Inventory Items &gt;90 Days in Stock</div>
           </div>
         </div>
 
