@@ -41,10 +41,17 @@ class WarehouseInventory(models.Model):
         help="Receiving Log / Air Waybill number associated with the delivery."
     )
     bl_awb_number     = fields.Char(string="BL / AWB Number")
-    expected_arrival_date = fields.Date(
-        string="Expected Arrival Date",
-        tracking=True
-    )
+    scheduled_date = fields.Datetime(
+        'Scheduled Date', compute='_compute_scheduled_date', inverse='_set_scheduled_date', store=True,
+        index=True, default=fields.Datetime.now, tracking=True,
+        String="Expected Arrival Date",
+        help="Scheduled time for the first part of the shipment to be processed. Setting manually a value here would set it as expected date for all the stock moves.")
+    expected_arrival_date = fields.Selection([
+        ('today', 'Today'),
+        ('tomorrow', 'Tomorrow'),
+        ('other', 'Other')
+    ], string='Expected Arrival Date (str)', compute='_compute_expected_arrival_date', store=True, default='other')
+    
     critical_equipment = fields.Selection([
         ('none', "None Critical"),
         ('safety', "Safety Critical"),
@@ -78,6 +85,17 @@ class WarehouseInventory(models.Model):
         digits='Product Price',
         help="Total amount for these goods"
     )
+    
+    def _compute_expected_arrival_date(self):
+        today = fields.Date.today()
+        for rec in self:
+            scheduled_date = rec.scheduled_date.date() if rec.scheduled_date else None
+            if scheduled_date == today:
+                rec.expected_arrival_date = 'today'
+            elif scheduled_date == today + timedelta(days=1):
+                rec.expected_arrival_date = 'tomorrow'
+            else:
+                rec.expected_arrival_date = 'other'
 
     
     @api.onchange('financial_id')

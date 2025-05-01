@@ -166,9 +166,10 @@ class WarehouseDashboard extends Component {
         try {
             const domain = this.getDomainWithFilters(domainAddition);
             // const domain = [['inventory_status', '=', 'arrived']]
+            console.log(domain);
 
             const actionData = {
-                title: title,
+                title: 'testing',
                 domain: domain
             };
 
