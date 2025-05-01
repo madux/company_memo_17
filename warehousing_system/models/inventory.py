@@ -278,19 +278,6 @@ class WarehouseInventory(models.Model):
             'dispatchedItems': dispatched_items
         }
         
-    # @api.model
-    # def get_record(self, actionData=None):
-    #     if not actionData:
-    #         actionData = {}
-    #     title = actionData.get('title')
-    #     domain = actionData.get('domain')
-    #     action_ref = 'warehousing_system.action_warehouse_inventory'
-    #     action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
-    #     if title:
-    #         action['display_name'] = title
-    #     action['views'] = [(False, view) for view in action['view_mode'].split(",")]
-    #     action['domain'] = domain
-    #     return {'action': action}
     
     @api.model
     def get_action(self, action_data=None):
