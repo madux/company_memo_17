@@ -91,7 +91,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', false], ['inventory_status', 'not in', ['draft','cancelled']]], {}, 'Inventory Items without Allocated Storage')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', False], ['inventory_status', 'not in', ['draft','cancelled']]], {}, 'Inventory Items without Allocated Storage')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-ban"/></div>
             <div class="card-count"><t t-esc="state.stats.withoutAllocatedStorage"/></div>
@@ -123,10 +123,10 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [['warehouse_id', '!=', false], ['inventory_status', '=', 'allocated']], {}, 'Inventory Items Displaced')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [['warehouse_id', '!=', False], ['inventory_status', '=', 'allocated']], {}, 'Inventory Items Displaced')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-truck-moving"/></div>
-            <div class="card-count"><t t-esc="state.stats.displachedItems"/></div>
+            <div class="card-count"><t t-esc="state.stats.displacedItems"/></div>
             <div class="card-title">Inventory Items Displaced</div>
           </div>
         </div>
@@ -139,7 +139,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [], {'expectedTomorrow': True}, 'Inventory Items Expected Tomorrow (Alt)')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [], {'expectedTomorrow': true}, 'Inventory Items Expected Tomorrow (Alt)')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-cloud"/></div>
             <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
@@ -150,7 +150,7 @@
         <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', [], {}, 'Inventory Items Dispatched')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-truck"/></div>
-            <div class="card-count"><t t-esc="state.stats.dispatchedItems || 0"/></div>
+            <div class="card-count"><t t-esc="state.stats.dispatchedItems"/></div>
             <div class="card-title">Inventory Items Dispatched</div>
           </div>
         </div>

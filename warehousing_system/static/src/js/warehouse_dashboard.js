@@ -72,19 +72,36 @@ class WarehouseDashboard extends Component {
                 'get_warehouse_dashboard_data',
                 [filterData]
             );
-           
-            this.state.stats = stats || {
-                waitingForInfo: 0,
-                expectedTomorrow: 0,
-                expectedToday: 0,
-                toBePutInStock: 0,
-                withoutAllocatedStorage: 0,
-                labelsToBePrinted: 0,
-                longerThan90Days: 0,
-                openOSDInventory: 0,
-                displachedItems: 0,
-                dispatchedItems: 0
-            };
+            
+            if (stats) {
+                this.state.stats = {
+                    waitingForInfo: stats.waitingForInfo || 0,
+                    expectedTomorrow: stats.expectedTomorrow || 0,
+                    expectedToday: stats.expectedToday || 0,
+                    toBePutInStock: stats.toBePutInStock || 0,
+                    withoutAllocatedStorage: stats.withoutAllocatedStorage || 0,
+                    labelsToBePrinted: stats.labelsToBePrinted || 0,
+                    longerThan90Days: stats.longerThan90Days || 0,
+                    openOSDInventory: stats.openOSDInventory || 0,
+                    displacedItems: stats.displacedItems || 0,
+                    dispatchedItems: stats.dispatchedItems || 0
+                };
+                console.log("Dashboard stats updated:", this.state.stats);
+            } else {
+                console.warn("No stats data returned from the server");
+                this.state.stats = {
+                    waitingForInfo: 0,
+                    expectedTomorrow: 0,
+                    expectedToday: 0,
+                    toBePutInStock: 0,
+                    withoutAllocatedStorage: 0,
+                    labelsToBePrinted: 0,
+                    longerThan90Days: 0,
+                    openOSDInventory: 0,
+                    displacedItems: 0,
+                    dispatchedItems: 0
+                };
+            }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             this.notificationService.add(
@@ -96,7 +113,6 @@ class WarehouseDashboard extends Component {
             );
         }
     }
-    
     
     onFilterChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
@@ -165,9 +181,10 @@ class WarehouseDashboard extends Component {
     async onCardClick(actionName, cardDomain, cardContext, title) {
         try {
             const domain = this.getDomainWithFilters(cardDomain);
-            // const domain = [['inventory_status', '=', 'arrived']]
-            console.log('Domain:', domain);
             const context = cardContext || {};
+            // const context = cardFlag ? { [cardFlag]: true } : {};
+                        
+            console.log('Domain:', domain);
             console.log('Context:', context);
 
             const actionData = {
@@ -185,7 +202,6 @@ class WarehouseDashboard extends Component {
             if (result && result.action) {
                 await this.actionService.doAction(result.action);
             }
-
         } catch (error) {
             console.error("Failed to execute action:", error);
             this.notificationService.add(
@@ -196,8 +212,6 @@ class WarehouseDashboard extends Component {
                 }
             );
         }
-
-        
     }
     
     willUnmount() {

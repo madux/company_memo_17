@@ -195,11 +195,10 @@ class WarehouseInventory(models.Model):
         if filters.get('fileType') and filters['fileType'] != 'All':
             base_domain.append(('inventory_status', '=', filters['fileType']))
         
-        if filters.get('projectNo') and filters['projectNo'] != 'All':
-            base_domain.append(('supplier_po_number', '=', filters['projectNo']))
+        if filters.get('projectNo') and filters['projectNo'].strip():
+            base_domain.append(('supplier_po_number', '=', filters['projectNo'].strip()))
         
         if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-
             month_mapping = {
                 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
@@ -265,7 +264,7 @@ class WarehouseInventory(models.Model):
             ('inventory_status', '=', 'done')
         ])
         
-        return {
+        result = {
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
             'expectedToday': expected_today,
@@ -278,7 +277,10 @@ class WarehouseInventory(models.Model):
             'dispatchedItems': dispatched_items
         }
         
-    
+        _logger.info(f"Dashboard data: {result}")
+        
+        return result
+
     @api.model
     def get_action(self, action_data=None):
         action_data = action_data or {}
@@ -306,10 +308,10 @@ class WarehouseInventory(models.Model):
                 _logger.info('Tomorrow\'s Context')
             elif ctx_flags.pop('longerThan90Days', False):
                 action['domain'].append([
-                ('actual_date_of_arrival', '!=', False),
-                ('actual_date_of_arrival', '<', ninety_days_ago),
-                ('inventory_status', 'not in', ['done', 'cancelled'])
-            ])
+                    ('actual_date_of_arrival', '!=', False),
+                    ('actual_date_of_arrival', '<', ninety_days_ago),
+                    ('inventory_status', 'not in', ['done', 'cancelled'])
+                ])
                 _logger.info('longerThan90Days\'s Context')
                 
             ctx = dict(action.get('context') or {})
