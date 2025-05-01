@@ -7,13 +7,13 @@
         <field name="priority" eval="20"/>
         <field name="arch" type="xml">
           <tree string="Warehouse Inventory">
-            <field name="name"/>
-            <field name="financial_id" context="{'show_address': False}"/>
+            <field name="name" string="WH File No."/>
+            <field name="origin" string="File No" context="{'show_address': False}"/>
             <field name="warehouse_id"/>
             <field name="inventory_status"/>
-            <field name="actual_date_of_arrival"/>
-            <field name="scheduled_date" string="Expected Arrival Date" />
-            <field name="receiving_supplier_id"/>
+            <field name="actual_date_of_arrival" string="Date Arrived"/>
+            <field name="expected_arrival_date" string="Expected Arrived"/>
+            <field name="amount" string="Total items"/>
           </tree>
         </field>
     </record>
@@ -52,6 +52,9 @@
                     <field name="state" widget="statusbar" invisible="1" statusbar_visible="draft,assigned,done"/>
                     <!-- <field name="state" widget="statusbar" invisible="picking_type_code == 'incoming'" statusbar_visible="draft,confirmed,assigned,done"/> -->
                     <button name="action_cancel" invisible="state not in ('assigned', 'confirmed', 'draft', 'waiting')" string="Cancel" groups="base.group_user" type="object" confirm="Are you sure you want to cancel this transfer?" data-hotkey="x"/>
+                    <button name="button_financial_file" type="object" string="View Financial File" 
+                    class="oe_highlight btn-sm" id="view_ff" data-hotkey="q"
+                    invisible="financial_id != False"/>
                 </header>
                 <sheet> 
                     <div class="oe_button_box" name="button_box" invisible="1">
@@ -93,15 +96,20 @@
                     <group>
                         <group>
                             <field name="warehouse_id" placeholder="Select Warehouse *" options="{'no_create': True}"/>
+                            <field name="picking_type_id" options="{'no_open': True}" invisible="hide_picking_type" readonly="state != 'draft' and id" domain="context.get('restricted_picking_type_code') and [('code', '=', context.get('restricted_picking_type_code'))] or [(1,'=',1)]"/>
+                            <field name="location_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
+                            <field name="location_dest_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
+                            <field name="location_id" options="{'no_create': True}" string="Source Location" readonly="state == 'done'"/>
+                            <field name="location_dest_id" options="{'no_create': True}" string="Destination Location" readonly="state == 'done'"/>
                             <field name="financial_id" placeholder="Select Warehouse File" options="{'no_create': True, 'no_open': True}"/>
                             <!-- <button name="button_financial_file" type="object" string="View Financial File" class="oe_highlight btn-sm" id="view_ff" data-hotkey="q"/> -->
-                            <field name="origin" string="Financial file code" placeholder="e.g. PO0032" readonly="state in ['cancel', 'done']"/>
+                            <field name="origin" string="Financial file No." placeholder="e.g. ME0001" readonly="state in ['cancel', 'done']"/>
                             <div class="o_td_label">
                                 <label for="partner_id" string="Delivery Address" style="font-weight:bold;" invisible="picking_type_code != 'outgoing'"/>
                                 <label for="partner_id" string="Receive From" style="font-weight:bold;" invisible="picking_type_code != 'incoming'"/>
-                                <label for="partner_id" string="Contact" style="font-weight:bold;" invisible="picking_type_code in ['incoming', 'outgoing']"/>
+                                <label for="partner_id" string="Client" style="font-weight:bold;" invisible="picking_type_code in ['incoming', 'outgoing']"/>
                             </div>
-                            <field name="partner_id" nolabel="1" readonly="state in ['cancel', 'done']"/>
+                            <field name="partner_id" nolabel="1" required="0" string="Client" readonly="1"/>
                             
                             <field name="state" readonly="1"/>
                         </group>
@@ -115,15 +123,10 @@
                             <field name="products_availability_state" invisible="1"/>
                             <field name="products_availability" invisible="picking_type_code != 'outgoing' or state not in ['confirmed', 'waiting', 'assigned']" decoration-success="state == 'assigned' or products_availability_state == 'available'" decoration-warning="state != 'assigned' and products_availability_state in ('expected', 'available')" decoration-danger="state != 'assigned' and products_availability_state == 'late'"/>
                             <field name="date_done" string="Effective Date" invisible="state != 'done'"/>
-                            <field name="picking_type_id" options="{'no_open': True}" invisible="hide_picking_type" readonly="state != 'draft' and id" domain="context.get('restricted_picking_type_code') and [('code', '=', context.get('restricted_picking_type_code'))] or [(1,'=',1)]"/>
                             <!-- <field name="inventory_status" placeholder="Select Inventory Status *" 
                                    widget="selection" options="{'no_create': True}"/> -->
                             <!-- <field name="inbound_picking_id" placeholder="Related Inbound Shipment" 
                                    options="{'no_create': True}" domain="[('picking_type_code','=','incoming')]" /> -->
-                            <field name="location_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
-                            <field name="location_dest_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
-                            <field name="location_id" options="{'no_create': True}" string="Source Location" readonly="state == 'done'"/>
-                            <field name="location_dest_id" options="{'no_create': True}" string="Destination Location" readonly="state == 'done'"/>
                             <field name="backorder_id" invisible="not backorder_id"/>
                             <field name="owner_id" invisible="picking_type_code != 'incoming'" readonly="state in ['cancel', 'done']"/> 
                             <field name="actual_date_of_arrival" />
@@ -134,20 +137,24 @@
                     <div class="o_horizontal_separator mt-4 mb-3">Item Info</div>
                     <group>
                         <group>
-                            <field name="customer_id" string="Customer" required="0" placeholder="Customer *" options="{'no_create': True}"/>
+                            <field name="customer_id" string="Customer" required="0" invisible="1" placeholder="Customer *" options="{'no_create': True}"/>
                             <field name="intended_vessel" placeholder="Intended Vessel" options="{'no_create': True}"/>
+                            <field name="supplier_po_number" placeholder="e.g PO012992"/>
+                            <field name="receiving_waybill_number" placeholder="Waybill Number" />
+                            <field name="bl_awb_number"/>
+
                         </group>
                         <group>
                             <field name="critical_equipment" placeholder="Critical Equipment" options="{'no_create': True}"/>
                             <field name="unit_of_measure_id" placeholder="Unit of Measure" options="{'no_create': True}"/>
                         </group>
                         <group>
-                            <field name="amount" string="Amount in Measure" placeholder="Amount in Measure" widget="Float"/>
+                            <field name="amount" string="Total items" widget="Float"/>
                         </group>
                     </group>
          
                     <notebook>
-                        <page string="Operations" name="operations">
+                        <page string="Packages" name="operations">
                             <field name="move_ids_without_package" mode="tree,kanban" widget="stock_move_one2many" readonly="state == 'done' and is_locked" context="{'default_company_id': company_id, 'default_date': scheduled_date, 'default_date_deadline': date_deadline, 'picking_type_code': picking_type_code, 'default_picking_id': id, 'form_view_ref': 'warehousing_system.view_stock_move_operations_form_extend', 'address_in_id': partner_id, 'default_picking_type_id': picking_type_id, 'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" add-label="Add a Product">
                                 <tree decoration-muted="scrapped == True or state == 'cancel' or (state == 'done' and is_locked == True)" string="Stock Moves" editable="1">
                                     <field name="company_id" column_invisible="True"/>
@@ -156,13 +163,13 @@
                                     <field name="state" readonly="0" column_invisible="True"/>
                                     <field name="picking_type_id" column_invisible="True"/>
                                     <field name="move_line_ids" column_invisible="True"/>
-                                    <field name="location_id" column_invisible="True"/>
-                                    <field name="location_dest_id" column_invisible="True"/>
+                                    <field name="location_id"/>
+                                    <field name="location_dest_id"/>
                                     <field name="partner_id" column_invisible="True" readonly="state == 'done'"/>
                                     <field name="scrapped" column_invisible="True"/>
                                     <field name="picking_code" column_invisible="True"/>
                                     <field name="product_type" column_invisible="True"/>
-                                    <field name="show_details_visible" column_invisible="True"/>
+                                   
                                     <field name="show_reserved" column_invisible="True"/>
                                     <field name="additional" column_invisible="True"/>
                                     <field name="move_lines_count" column_invisible="True"/>
@@ -184,14 +191,17 @@
                                     <field name="picking_type_entire_packs" column_invisible="True"/>
                                     <field name="product_packaging_id" groups="product.group_stock_packaging" context="{'default_product_id': product_id}" readonly="not product_id"/>
                                     <field name="product_uom_qty" string="Demand" readonly="not is_initial_demand_editable"/>
+                                    <field name="show_details_visible" string="Put Away" default="True" readonly="0" force_save="1"/>
                                     <field name="forecast_expected_date" column_invisible="True"/>
                                     <field name="forecast_availability" string="Forecast" optional="hide" column_invisible="parent.state in ('draft', 'done') or parent.picking_type_code != 'outgoing'" widget="forecast_widget"/>
                                     <field name="product_qty" readonly="1" column_invisible="True"/>
                                     <field name="quantity" string="Quantity" readonly="not is_quantity_done_editable" column_invisible="parent.state=='draft'" decoration-danger="product_uom_qty and quantity &gt; product_uom_qty and parent.state not in ['done', 'cancel']"/>
-                                    <field name="product_uom" readonly="state != 'draft' and not additional" options="{'no_open': True, 'no_create': True}" string="Unit"/>
-                                    <field name="product_uom" column_invisible="True"/>
+                                    <field name="product_uom" options="{'no_open': True, 'no_create': True}" string="Unit"/>
+                                    <field name="no_of_items"/>
+                                    <field name="item_picture" widget="image" class="oe_avatar"/>
                                     <field name="picked" optional="hide" column_invisible="parent.state=='draft'"/>
-                                    <field name="lot_ids" widget="many2many_tags" column_invisible="parent.state == 'draft'" groups="stock.group_production_lot" invisible="not show_details_visible or has_tracking == 'none'" optional="hide" options="{'create': [('parent.use_create_lots', '=', True)]}" context="{'default_company_id': company_id, 'default_product_id': product_id, 'active_picking_id': parent.id}" domain="[('product_id','=',product_id)]"/>
+                                    <!-- <field name="lot_ids" widget="many2many_tags" column_invisible="parent.state == 'draft'" optional="hide" options="{'create': [('parent.use_create_lots', '=', True)]}" context="{'default_company_id': company_id, 'default_product_id': product_id, 'active_picking_id': parent.id}" domain="[('product_id','=',product_id)]"/> -->
+                                    <field name="lot_ids" widget="many2many_tags" context="{'default_company_id': company_id, 'default_product_id': product_id, 'active_picking_id': parent.id}" domain="[('product_id','=',product_id)]"/>
                                     <button name="action_assign_serial" type="object" icon="fa-plus-square" role="img" title="Assign Serial Numbers" invisible="not display_assign_serial"/>
                                     <button type="object" name="action_product_forecast_report" title="Forecast Report" icon="fa-area-chart" invisible="quantity == 0 and forecast_availability &lt;= 0 or (parent.picking_type_code == 'outgoing' and state != 'draft')"/>
                                     <button type="object" name="action_product_forecast_report" title="Forecast Report" icon="fa-area-chart text-danger" invisible="quantity &gt; 0 or forecast_availability &gt; 0 or (parent.picking_type_code == 'outgoing' and state != 'draft')"/>
@@ -199,7 +209,7 @@
                             </field>
                             <field name="id" invisible="1"/>
                             <field name="package_level_ids" context="{'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_company_id': company_id}" invisible="not picking_type_entire_packs" readonly="state == 'done'"/>
-                            <button class="btn-secondary float-end" name="action_put_in_pack" type="object" string="Put in Pack" invisible="state in ('draft', 'done', 'cancel')" groups="stock.group_tracking_lot" data-hotkey="shift+g"/>
+                            <button class="btn-secondary float-end" name="action_put_in_pack" type="object" string="Put in Pack" invisible="state in ('done', 'cancel')" data-hotkey="shift+g"/>
                         </page>
                         <page string="Additional Info" name="extra">
                             <group>
@@ -219,27 +229,58 @@
     </record>
 
 
-      <record id="action_warehouse_inventory" model="ir.actions.act_window">
-        <field name="name">Warehouse Inventory</field>
+      <record id="action_warehouse_dispatch_inventory" model="ir.actions.act_window">
+        <field name="name">Warehouse Inventory Dispatch</field>
         <field name="res_model">stock.picking</field>
         <field name="view_mode">form,tree</field>
-        <field name="domain">[('financial_id', '!=', False)]</field>
+        <field name="domain">[('financial_id', '!=', False),('picking_type_code','=','outgoing')]</field>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
       </record>
+
+    <record id="action_warehouse_inventory_receipts" model="ir.actions.act_window">
+        <field name="name">Warehouse Inventory Receipts</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">form,tree</field>
+        <field name="domain">[('financial_id', '!=', False), ('picking_type_code','=','incoming')]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
+    </record>
       
 
     <menuitem
         id="menu_warehouse_system_root"
-        name="Warehouse Operations"
+        name="Warehousing"
         sequence="50"/>
 
+    
+
     <menuitem
-        id="menu_warehouse_inventory"
-        name="Warehouse Inventory Receipts"
+        id="menu_warehouse_inventory_receipt"
+        name="Warehouse Receipts"
         parent="warehousing_system.menu_warehouse_system_root"
-        action="warehousing_system.action_warehouse_inventory"
+        action="warehousing_system.action_warehouse_inventory_receipts"
         sequence="1"/>
+
+    <menuitem
+        id="menu_warehouse_inventory_dispatch"
+        name="Warehouse Dispatch"
+        parent="warehousing_system.menu_warehouse_system_root"
+        action="warehousing_system.action_warehouse_dispatch_inventory"
+        sequence="5"/>
+    
+    <menuitem
+        id="menu_warehouse_system_root_configuration"
+        name="Warehouse Setup"
+        parent="warehousing_system.menu_warehouse_system_root"
+        sequence="100"/>
+
+    <record id="warehousing_system.menu_warehouse_system_root_configuration" model="ir.ui.menu">
+        <field name="child_id" eval="[
+            (4, ref('stock.menu_stock_config_settings')),
+            ]"/>
+    </record>
 
 </odoo>

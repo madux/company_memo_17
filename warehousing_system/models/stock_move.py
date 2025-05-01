@@ -23,6 +23,8 @@ class StockMove(models.Model):
     volume_m3 = fields.Float(String="Space occupied (m3)")
     #Chargeable Space in m2
     area_chargeable = fields.Float(String="Chargeable Space(m2)")
-
     
-    #Preview img
+    show_details_visible = fields.Boolean('Details Visible', default=True)
+    no_of_items = fields.Float('No. of items', help="No of item in each box")
+    item_picture = fields.Binary("Picture")
+     
