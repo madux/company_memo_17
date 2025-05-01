@@ -43,19 +43,19 @@ class WarehouseDashboard extends Component {
             await this.fetchDashboardData();
         });
         
-        onMounted(() => {
-            this._adjustLayout();
+        // onMounted(() => {
+        //     this._adjustLayout();
             
-            window.addEventListener('resize', this._adjustLayout);
-        });
+        //     window.addEventListener('resize', this._adjustLayout);
+        // });
     }
     
-    _adjustLayout() {
-        const dashboard = document.querySelector('.warehouse-dashboard');
-        if (dashboard) {
-            void dashboard.offsetWidth;
-        }
-    }
+    // _adjustLayout() {
+    //     const dashboard = document.querySelector('.warehouse-dashboard');
+    //     if (dashboard) {
+    //         void dashboard.offsetWidth;
+    //     }
+    // }
     
     async fetchDashboardData() {
         try {
@@ -72,36 +72,49 @@ class WarehouseDashboard extends Component {
                 'get_warehouse_dashboard_data',
                 [filterData]
             );
+
+            this.state.stats = stats || {
+                waitingForInfo: 0,
+                expectedTomorrow: 0,
+                expectedToday: 0,
+                toBePutInStock: 0,
+                withoutAllocatedStorage: 0,
+                labelsToBePrinted: 0,
+                longerThan90Days: 0,
+                openOSDInventory: 0,
+                displacedItems: 0,
+                dispatchedItems: 0
+            };
             
-            if (stats) {
-                this.state.stats = {
-                    waitingForInfo: stats.waitingForInfo || 0,
-                    expectedTomorrow: stats.expectedTomorrow || 0,
-                    expectedToday: stats.expectedToday || 0,
-                    toBePutInStock: stats.toBePutInStock || 0,
-                    withoutAllocatedStorage: stats.withoutAllocatedStorage || 0,
-                    labelsToBePrinted: stats.labelsToBePrinted || 0,
-                    longerThan90Days: stats.longerThan90Days || 0,
-                    openOSDInventory: stats.openOSDInventory || 0,
-                    displacedItems: stats.displacedItems || 0,
-                    dispatchedItems: stats.dispatchedItems || 0
-                };
-                console.log("Dashboard stats updated:", this.state.stats);
-            } else {
-                console.warn("No stats data returned from the server");
-                this.state.stats = {
-                    waitingForInfo: 0,
-                    expectedTomorrow: 0,
-                    expectedToday: 0,
-                    toBePutInStock: 0,
-                    withoutAllocatedStorage: 0,
-                    labelsToBePrinted: 0,
-                    longerThan90Days: 0,
-                    openOSDInventory: 0,
-                    displacedItems: 0,
-                    dispatchedItems: 0
-                };
-            }
+            // if (stats) {
+            //     this.state.stats = {
+            //         waitingForInfo: stats.waitingForInfo || 0,
+            //         expectedTomorrow: stats.expectedTomorrow || 0,
+            //         expectedToday: stats.expectedToday || 0,
+            //         toBePutInStock: stats.toBePutInStock || 0,
+            //         withoutAllocatedStorage: stats.withoutAllocatedStorage || 0,
+            //         labelsToBePrinted: stats.labelsToBePrinted || 0,
+            //         longerThan90Days: stats.longerThan90Days || 0,
+            //         openOSDInventory: stats.openOSDInventory || 0,
+            //         displacedItems: stats.displacedItems || 0,
+            //         dispatchedItems: stats.dispatchedItems || 0
+            //     };
+            //     console.log("Dashboard stats updated:", this.state.stats);
+            // } else {
+            //     console.warn("No stats data returned from the server");
+            //     this.state.stats = {
+            //         waitingForInfo: 0,
+            //         expectedTomorrow: 0,
+            //         expectedToday: 0,
+            //         toBePutInStock: 0,
+            //         withoutAllocatedStorage: 0,
+            //         labelsToBePrinted: 0,
+            //         longerThan90Days: 0,
+            //         openOSDInventory: 0,
+            //         displacedItems: 0,
+            //         dispatchedItems: 0
+            //     };
+            // }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             this.notificationService.add(
@@ -115,6 +128,12 @@ class WarehouseDashboard extends Component {
     }
     
     onFilterChange(event, filterName) {
+        this.state.filters[filterName] = event.target.value;
+        // this._debouncedFetch();
+        this.fetchDashboardData();
+    }
+
+    onClientInputChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
         this._debouncedFetch();
     }
@@ -220,11 +239,13 @@ class WarehouseDashboard extends Component {
 }
 
 WarehouseDashboard.template = 'warehousing_system.WarehouseDashboard';
-WarehouseDashboard.props = {
-    action: { type: Object, optional: true },
-    actionId: { type: [Number, String], optional: true },
-    className: { type: String, optional: true },
-};
+// WarehouseDashboard.props = {
+//     action: { type: Object, optional: true },
+//     actionId: { type: [Number, String], optional: true },
+//     className: { type: String, optional: true },
+// };
+
+WarehouseDashboard.props = {};
 
 registry.category("actions").add("warehouse_inventory_dashboard", WarehouseDashboard);
 

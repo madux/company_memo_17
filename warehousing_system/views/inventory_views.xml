@@ -12,7 +12,7 @@
             <field name="warehouse_id"/>
             <field name="inventory_status"/>
             <field name="actual_date_of_arrival"/>
-            <field name="expected_arrival_date"/>
+            <field name="scheduled_date" string="Expected Arrival Date" />
             <field name="receiving_supplier_id"/>
           </tree>
         </field>

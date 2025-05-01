@@ -44,16 +44,12 @@ class WarehouseInventory(models.Model):
         help="Receiving Log / Air Waybill number associated with the delivery."
     )
     bl_awb_number     = fields.Char(string="BL / AWB Number")
-    scheduled_date = fields.Datetime(
-        'Scheduled Date', compute='_compute_scheduled_date', inverse='_set_scheduled_date', store=True,
-        index=True, default=fields.Datetime.now, tracking=True,
-        String="Expected Arrival Date",
-        help="Scheduled time for the first part of the shipment to be processed. Setting manually a value here would set it as expected date for all the stock moves.")
-    expected_arrival_date = fields.Selection([
-        ('today', 'Today'),
-        ('tomorrow', 'Tomorrow'),
-        ('other', 'Other')
-    ], string='Expected Arrival Date (str)', compute='_compute_expected_arrival_date', store=True, default='other')
+    
+    # expected_arrival_date = fields.Selection([
+    #     ('today', 'Today'),
+    #     ('tomorrow', 'Tomorrow'),
+    #     ('other', 'Other')
+    # ], string='Expected Arrival Date (str)', compute='_compute_expected_arrival_date', store=True, default='other')
     
     critical_equipment = fields.Selection([
         ('none', "None Critical"),
@@ -191,12 +187,14 @@ class WarehouseInventory(models.Model):
         
         if filters.get('client') and filters['client'].strip():
             base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
+            _logger.info(f'Customer: {base_domain}')
         
-        if filters.get('fileType') and filters['fileType'] != 'All':
-            base_domain.append(('inventory_status', '=', filters['fileType']))
+        if filters.get('fileType') and filters['fileType'] != 'warehouse':
+            # base_domain.append(('inventory_status', '=', filters['fileType']))
+            _logger.info('Not implemented...continuing with warehouse')
         
         if filters.get('projectNo') and filters['projectNo'].strip():
-            base_domain.append(('supplier_po_number', '=', filters['projectNo'].strip()))
+            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
         
         if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
             month_mapping = {
@@ -233,8 +231,8 @@ class WarehouseInventory(models.Model):
         ninety_days_ago = today - timedelta(days=90)
         
         waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft')])
-        expected_tomorrow = self.search_count(base_domain + [('expected_arrival_date', '=', tomorrow)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today)])
+        expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow)])
+        expected_today = self.search_count(base_domain + [('scheduled_date', '=', today)])
         to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived')])
         without_allocated_storage = self.search_count(base_domain + [
             ('warehouse_id', '=', False), 
@@ -252,7 +250,7 @@ class WarehouseInventory(models.Model):
         ])
         
         open_osd_inventory = self.search_count(base_domain + [
-            ('inventory_status', '=', 'waiting')
+            ('inventory_status', '=', 'arrived')
         ])
         
         displaced_items = self.search_count(base_domain + [
