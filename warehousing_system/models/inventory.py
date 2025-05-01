@@ -6,9 +6,9 @@ class WarehouseInventory(models.Model):
 
     financial_id = fields.Many2one(
         'memo.model',
-        string="Financial File / PO",
+        string="Financial File",
         help="Refers to the Purchase Order associated with this inventory receipt.",
-        domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
+        # domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
     )
     warehouse_id = fields.Many2one(
         'stock.warehouse',
@@ -33,14 +33,14 @@ class WarehouseInventory(models.Model):
         help="The supplier who delivered the goods."
     )
     supplier_po_number = fields.Char(
-        string="Supplier PO Number",
+        string="PO Number",
         help="PO number from the supplier's system, if different from Odoo's PO."
     )
     receiving_waybill_number = fields.Char(
         string="Waybill Number (RL/AWB)",
         help="Receiving Log / Air Waybill number associated with the delivery."
     )
-    bl_awb_number     = fields.Char(string="BL / AWB Number")
+    bl_awb_number = fields.Char(string="BL/AWB Number")
     expected_arrival_date = fields.Date(
         string="Expected Arrival Date",
         tracking=True
@@ -74,18 +74,30 @@ class WarehouseInventory(models.Model):
         help="Select the default unit of measure for this receipt."
     )
     amount = fields.Float(
-        string="Amount",
-        digits='Product Price',
-        help="Total amount for these goods"
+        string="Total items", 
+        help="Total items for each line",
+        compute="compute_total_items"
     )
 
-    
+    @api.depends('move_ids_without_package.no_of_items')
+    def compute_total_items(self):
+        for rec in self:
+            total = 0
+            if rec.move_ids_without_package:
+                sum_items = sum([re.no_of_items for re in self.mapped('move_ids_without_package')])
+                total += sum_items 
+            else:
+                total += 0 
+            rec.amount = total 
+            
     @api.onchange('financial_id')
     def _onchange_financial_id_for_items(self):
         for pick in self:
             if pick.financial_id:
-                self.supplier_po_number = self.financial_id.name or ''
+                # self.supplier_po_number = self.financial_id.name or ''
                 self.origin = self.financial_id.code
+                self.partner_id = self.financial_id.client_id.id
+                self.customer_id = self.financial_id.client_id.id
                 if not self.receiving_supplier_id and self.financial_id.client_id:
                     self.receiving_supplier_id = self.financial_id.client_id
                 pick.move_ids_without_package = [(5, 0, 0)]
@@ -94,21 +106,22 @@ class WarehouseInventory(models.Model):
                 dst_loc = pick.location_dest_id.id \
                         or pick.picking_type_id.default_location_dest_id.id
                 new_moves = []
-                for wb in pick.financial_id.waybill_ids:
-                    uom = self.env['uom.uom'].search(
-                        [('name', '=', wb.uom)], limit=1
-                    )
-                    new_moves.append((0, 0, {
-                        'name': wb.product_id.display_name,
-                        'product_id': wb.product_id.id,
-                        'product_uom_qty': wb.quantity or 0.0,
-                        'product_uom': uom.id or wb.product_id.uom_id.id or False,
-                        'location_id': src_loc,
-                        'location_dest_id': dst_loc,
-                        'description_picking': wb.waybill_desc or '',
-                    }))
-                pick.move_ids_without_package = new_moves
-                self.inventory_status = "arrived"
+                if pick.financial_id.waybill_ids:
+                    for wb in pick.financial_id.waybill_ids:
+                        uom = self.env['uom.uom'].search(
+                            [('name', '=', wb.uom)], limit=1
+                        )
+                        new_moves.append((0, 0, {
+                            'name': wb.product_id.display_name,
+                            'product_id': wb.product_id.id,
+                            'product_uom_qty': wb.quantity or 0.0,
+                            'product_uom': uom.id or wb.product_id.uom_id.id or False,
+                            'location_id': src_loc,
+                            'location_dest_id': dst_loc,
+                            'description_picking': wb.waybill_desc or '',
+                        }))
+                    pick.move_ids_without_package = new_moves
+                    self.inventory_status = "arrived"
             # else:
             #     self.inventory_status = "arrived"
             #     self.state = "draft"
@@ -121,16 +134,17 @@ class WarehouseInventory(models.Model):
     )
 
     def button_financial_file(self):
-        view_id = self.env.ref('company_memo.memo_model_form_view_3').id
+        view_id = self.env.ref('company_memo.tree_memo_model_view2').id
         ret = {
             'name': "Financial File",
-            'view_mode': 'form',
+            'view_mode': 'tree',
             'view_id': view_id,
-            'view_type': 'form',
+            'view_type': 'tree',
             'res_model': 'memo.model',
-            'res_id': self.financial_id.id,
+            # 'res_id': self.financial_id.id,
             'type': 'ir.actions.act_window',
-            'target': 'new'
+            'target': 'current',
+            'domain' :[('id', 'in', [self.financial_id.id])]
             }
         return ret
     
