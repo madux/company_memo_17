@@ -171,7 +171,7 @@ class WarehouseDashboard extends Component {
             console.log('Context:', context);
 
             const actionData = {
-                title: 'testing',
+                title: title,
                 domain: domain,
                 context: context
             };
