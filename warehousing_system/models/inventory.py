@@ -1,5 +1,8 @@
 from odoo import api, fields, models
 from datetime import date, timedelta
+import logging
+
+_logger = logging.getLogger(__name__)
     
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
@@ -253,7 +256,7 @@ class WarehouseInventory(models.Model):
             ('inventory_status', '=', 'waiting')
         ])
         
-        displached_items = self.search_count(base_domain + [
+        displaced_items = self.search_count(base_domain + [
             ('warehouse_id', '!=', False),
             ('inventory_status', '=', 'allocated')
         ])
@@ -271,7 +274,7 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displachedItems': displached_items,
+            'displacedItems': displaced_items,
             'dispatchedItems': dispatched_items
         }
         
@@ -302,9 +305,28 @@ class WarehouseInventory(models.Model):
         if 'domain' in action_data and action_data['domain'] is not None:
             action['domain'] = action_data['domain']
 
-        if action_data.get('context'):
+        ctx_flags = action_data.get('context') or {}
+        if ctx_flags:
+            today = fields.Date.today()
+            tomorrow = today + timedelta(days=1)
+            ninety_days_ago = today - timedelta(days=90)
+            
+            if ctx_flags.pop('expectedToday', False):
+                action['domain'].append([('scheduled_date', '=', today)])
+                _logger.info('Today\'s Context')
+            elif ctx_flags.pop('expectedTomorrow', False):
+                action['domain'].append([('scheduled_date', '=', tomorrow)])
+                _logger.info('Tomorrow\'s Context')
+            elif ctx_flags.pop('longerThan90Days', False):
+                action['domain'].append([
+                ('actual_date_of_arrival', '!=', False),
+                ('actual_date_of_arrival', '<', ninety_days_ago),
+                ('inventory_status', 'not in', ['done', 'cancelled'])
+            ])
+                _logger.info('longerThan90Days\'s Context')
+                
             ctx = dict(action.get('context') or {})
-            ctx.update(action_data['context'])
+            ctx.update(ctx_flags)
             action['context'] = ctx
 
         return {'action': action}

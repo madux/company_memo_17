@@ -34,7 +34,7 @@ class WarehouseDashboard extends Component {
                 labelsToBePrinted: 0,
                 longerThan90Days: 0,
                 openOSDInventory: 0,
-                displachedItems: 0,
+                displacedItems: 0,
                 dispatchedItems: 0
             }
         });
@@ -162,15 +162,18 @@ class WarehouseDashboard extends Component {
         return domain;
     }
 
-    async onCardClick(actionName, domainAddition, title) {
+    async onCardClick(actionName, cardDomain, cardContext, title) {
         try {
-            const domain = this.getDomainWithFilters(domainAddition);
+            const domain = this.getDomainWithFilters(cardDomain);
             // const domain = [['inventory_status', '=', 'arrived']]
-            console.log(domain);
+            console.log('Domain:', domain);
+            const context = cardContext || {};
+            console.log('Context:', context);
 
             const actionData = {
                 title: 'testing',
-                domain: domain
+                domain: domain,
+                context: context
             };
 
             const result = await this.orm.call(
