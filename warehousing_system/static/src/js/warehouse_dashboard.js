@@ -9,21 +9,21 @@ class WarehouseDashboard extends Component {
         this.actionService = useService("action");
         this.rpc = useService("rpc");
         this.notificationService = useService("notification");
+        
         this.state = useState({
             filters: {
                 client: '',
-                fileType: '',
+                fileType: 'warehouse',
                 projectNo: '',
-                month: '',
-                year: ''
+                month: 'All',
+                year: 'All'
             },
             statusOptions: [
                 { id: 'warehouse', name: 'WAREHOUSING' },
                 { id: 'transport', name: 'TRANSPORT' },
                 { id: 'travel', name: 'TRAVEL' },
                 { id: 'agency', name: 'AGENCY' },
-                { id: 'cfwd', name: 'CFWD' },
-                { id: 'procurement', name: 'PROCUREMENT'}
+                { id: 'cfwd', name: 'CFWD' }
             ],
             stats: {
                 waitingForInfo: 0,
@@ -43,28 +43,24 @@ class WarehouseDashboard extends Component {
             await this.fetchDashboardData();
         });
         
-        onMounted(() => {
-            // Ensure proper layout rendering after component is mounted
-            this._adjustLayout();
+        // onMounted(() => {
+        //     this._adjustLayout();
             
-            // Add resize listener for responsive adjustments
-            window.addEventListener('resize', this._adjustLayout);
-        });
+        //     window.addEventListener('resize', this._adjustLayout);
+        // });
     }
     
-    _adjustLayout() {
-        // Force recalculation of layout after render
-        const dashboard = document.querySelector('.warehouse-dashboard');
-        if (dashboard) {
-            // Trigger browser reflow
-            void dashboard.offsetWidth;
-        }
-    }
+    // _adjustLayout() {
+    //     const dashboard = document.querySelector('.warehouse-dashboard');
+    //     if (dashboard) {
+    //         void dashboard.offsetWidth;
+    //     }
+    // }
     
     async fetchDashboardData() {
         try {
             const filterData = {
-                client: this.state.filters.client, 
+                client: this.state.filters.client,
                 fileType: this.state.filters.fileType,
                 projectNo: this.state.filters.projectNo,
                 month: this.state.filters.month,
@@ -76,7 +72,7 @@ class WarehouseDashboard extends Component {
                 'get_warehouse_dashboard_data',
                 [filterData]
             );
-           
+
             this.state.stats = stats || {
                 waitingForInfo: 0,
                 expectedTomorrow: 0,
@@ -89,6 +85,36 @@ class WarehouseDashboard extends Component {
                 displacedItems: 0,
                 dispatchedItems: 0
             };
+            
+            // if (stats) {
+            //     this.state.stats = {
+            //         waitingForInfo: stats.waitingForInfo || 0,
+            //         expectedTomorrow: stats.expectedTomorrow || 0,
+            //         expectedToday: stats.expectedToday || 0,
+            //         toBePutInStock: stats.toBePutInStock || 0,
+            //         withoutAllocatedStorage: stats.withoutAllocatedStorage || 0,
+            //         labelsToBePrinted: stats.labelsToBePrinted || 0,
+            //         longerThan90Days: stats.longerThan90Days || 0,
+            //         openOSDInventory: stats.openOSDInventory || 0,
+            //         displacedItems: stats.displacedItems || 0,
+            //         dispatchedItems: stats.dispatchedItems || 0
+            //     };
+            //     console.log("Dashboard stats updated:", this.state.stats);
+            // } else {
+            //     console.warn("No stats data returned from the server");
+            //     this.state.stats = {
+            //         waitingForInfo: 0,
+            //         expectedTomorrow: 0,
+            //         expectedToday: 0,
+            //         toBePutInStock: 0,
+            //         withoutAllocatedStorage: 0,
+            //         labelsToBePrinted: 0,
+            //         longerThan90Days: 0,
+            //         openOSDInventory: 0,
+            //         displacedItems: 0,
+            //         dispatchedItems: 0
+            //     };
+            // }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             this.notificationService.add(
@@ -103,6 +129,7 @@ class WarehouseDashboard extends Component {
     
     onFilterChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
+        // this._debouncedFetch();
         this.fetchDashboardData();
     }
 
@@ -123,8 +150,6 @@ class WarehouseDashboard extends Component {
     getDomainWithFilters(additionalDomain = []) {
         let domain = [...additionalDomain];
         
-        // 
-        
         if (this.state.filters.fileType === 'warehouse') {
             if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
                 domain.push(['origin', 'ilike', this.state.filters.projectNo.trim()]);
@@ -134,10 +159,6 @@ class WarehouseDashboard extends Component {
                 domain.push(['customer_id.name', 'ilike', this.state.filters.client.trim()]);
             }
         }
-        
-        // if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
-        //     domain.push(['supplier_po_number', 'ilike', this.state.filters.projectNo.trim()]);
-        // }
         else {
             domain.push(['memo_project_type', '=', this.state.filters.fileType]);
             if (this.state.filters.projectNo && this.state.filters.projectNo.trim() !== '') {
@@ -178,31 +199,19 @@ class WarehouseDashboard extends Component {
 
     async onCardClick(actionName, cardDomain, cardContext, title) {
         try {
-            // const domain = this.getDomainWithFilters(domainAddition);
-            // await this.actionService.doAction({
-            //     type: 'ir.actions.act_window',
-            //     res_model: 'stock.picking',
-            //     view_mode: 'tree,form',
             const domain = this.getDomainWithFilters(cardDomain);
             const context = cardContext || {};
             // const context = cardFlag ? { [cardFlag]: true } : {};
-
+                        
             console.log('Domain:', domain);
             console.log('Context:', context);
 
             const actionData = {
                 title: title,
                 domain: domain,
-                // name: title,
-                // context: {
-                //     search_default_client: this.state.filters.client || false,
-                //     search_default_fileType: this.state.filters.fileType !== 'All' ? this.state.filters.fileType : false,
-                //     search_default_projectNo: this.state.filters.projectNo || false,
-                //     search_default_month: this.state.filters.month !== 'All' ? this.state.filters.month : false,
-                //     search_default_year: this.state.filters.year !== 'All' ? this.state.filters.year : false
-                // }
                 context: context
             };
+
             const result = await this.orm.call(
                 'stock.picking',
                 'get_action',
@@ -223,12 +232,19 @@ class WarehouseDashboard extends Component {
             );
         }
     }
+    
     willUnmount() {
         window.removeEventListener('resize', this._adjustLayout);
     }
 }
 
 WarehouseDashboard.template = 'warehousing_system.WarehouseDashboard';
+// WarehouseDashboard.props = {
+//     action: { type: Object, optional: true },
+//     actionId: { type: [Number, String], optional: true },
+//     className: { type: String, optional: true },
+// };
+
 WarehouseDashboard.props = {};
 
 registry.category("actions").add("warehouse_inventory_dashboard", WarehouseDashboard);

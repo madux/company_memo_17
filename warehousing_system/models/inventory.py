@@ -272,9 +272,12 @@ class WarehouseInventory(models.Model):
             ('financial_id', '!=', False),
         ])
         not_printed_labels = []
+        pickings_not_printed = []
         for lb in labels_to_be_printed_ids:
             moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
             not_printed_labels += moves.ids
+            pickings_not_printed += [m.picking_id.id for m in moves] # 54
+            
         _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
         labels_to_be_printed = len(not_printed_labels)
         longer_than_90_days = self.search_count(base_domain + [
