@@ -2,12 +2,21 @@
   max-width: 1200px;
   margin: auto;
   padding: 1.5rem;
+  height: 100%;
+  overflow-y: auto;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
 }
 
 .dashboard-cards {
   display: flex;
   flex-wrap: wrap;
   margin: -0.75rem;
+  padding-bottom: 1.5rem;
 }
 
 .col-card {
@@ -27,13 +36,54 @@
   flex-direction: column;
   justify-content: space-between;
   transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+.warehouse-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.warehouse-card .card-icon {
+  font-size: 1.75rem;
+  color: #c02c2c;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  pointer-events: none;
+}
+.warehouse-card .card-count {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #c02c2c;
+  text-align: center;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+/* .warehouse-card .card-title {
+  font-size: 0.9rem;
+  color: #9a2222;
+  text-align: center;
+} */
+.warehouse-card .card-title {
+  font-size: 0.9rem;
+  color: #9a2222;
+  text-align: center;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+  padding: 0 0.5rem;
+}
 
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+@media (max-width: 768px) {
+  .dashboard-filters .row {
+    flex-direction: column;
   }
-
-  .card-icon { font-size: 1.75rem; color: #c02c2c; }
-  .card-count { font-size: 2rem; font-weight: bold; color: #c02c2c; }
-  .card-title { font-size: 0.9rem; color: #9a2222; }
+  .dashboard-filters .col {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .col-card {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }
