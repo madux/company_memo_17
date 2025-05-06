@@ -1,14 +1,42 @@
 from odoo import api, fields, models
 from datetime import date, timedelta
-    
+import logging
+
+_logger = logging.getLogger(__name__)
+
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
-
+    
+    @api.onchange('warehouse_id')
+    def onchange_warehouse(self):
+        picking_code = self.env.context.get('default_picking_type_code') or self.picking_type_code
+        if self.warehouse_id:
+            warehouse_picking_types = self.env['stock.picking.type'].search([
+                ('warehouse_id', '=', self.warehouse_id.id),
+                ('code', '=', picking_code),
+                ])
+            self.update({
+                'dummy_picking_type_ids': [(6, 0, warehouse_picking_types.ids)]
+                })
+        else:
+            self.update({
+                'dummy_picking_type_ids': False
+                })
+                
+    dummy_picking_type_ids = fields.Many2many(
+        'stock.picking.type',
+        string="Dummy Stock Picking type",
+    )
+     
     financial_id = fields.Many2one(
         'memo.model',
         string="Financial File",
         help="Refers to the Purchase Order associated with this inventory receipt.",
         # domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
+    )
+    related_inbound_shipment = fields.Many2one(
+        'stock.picking',
+        string="Related Inbound Shipment",
     )
     warehouse_id = fields.Many2one(
         'stock.warehouse',
@@ -18,7 +46,7 @@ class WarehouseInventory(models.Model):
     inventory_status = fields.Selection(selection=[
         ('draft', "Draft"),
         ('arrived', "Arrived at Warehouse"),
-        ('allocated', "Allocated"),
+        ('allocated', "Pre-Allocated"),
         ('done', 'Completed'),
         ('cancelled', 'Cancelled')
     ], string="Inventory Status", default='draft', index=True, tracking=True)
@@ -185,14 +213,15 @@ class WarehouseInventory(models.Model):
         if filters.get('client') and filters['client'].strip():
             base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
         
-        if filters.get('fileType') and filters['fileType'] != 'All':
-            base_domain.append(('inventory_status', '=', filters['fileType']))
+        if filters.get('fileType'): # and filters['fileType'] != 'warehouse':
+            # ['warehouse', 'procurement', 'agency', 'cfwd', 'transport', 'travel']
+            base_domain.append(('financial_id.memo_project_type', '=', filters['fileType']))
+            _logger.info('Not implemented...continuing with warehouse')
         
-        if filters.get('projectNo') and filters['projectNo'] != 'All':
-            base_domain.append(('supplier_po_number', '=', filters['projectNo']))
-        
+        if filters.get('projectNo') and filters['projectNo'].strip():
+            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
+            
         if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-
             month_mapping = {
                 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
@@ -226,39 +255,52 @@ class WarehouseInventory(models.Model):
         tomorrow = today + timedelta(days=1)
         ninety_days_ago = today - timedelta(days=90)
         
-        waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft')])
-        expected_tomorrow = self.search_count(base_domain + [('expected_arrival_date', '=', tomorrow)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today)])
-        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived')])
+        waiting_for_info = self.search_count([('inventory_status', '=', 'draft'), ('financial_id', '!=', False)] + base_domain) #base_domain + [('inventory_status', '=', 'draft')])
+        expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
+        expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
+        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
+        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)])
+        
         without_allocated_storage = self.search_count(base_domain + [
-            ('warehouse_id', '=', False), 
-            ('inventory_status', 'not in', ['draft', 'cancelled'])
+            ('warehouse_id', '=', False),
+            ('financial_id', '!=', False),
+            ('inventory_status', 'in', ['draft', 'cancelled'])
         ])
         
-        labels_to_be_printed = self.search_count(base_domain + [
-            ('inventory_status', 'in', ['arrived', 'allocated']),
+        labels_to_be_printed_ids = self.search(base_domain + [
+            ('inventory_status', 'not in', ['draft', 'cancelled']),
+            ('financial_id', '!=', False),
         ])
-        
+        not_printed_labels = []
+        for lb in labels_to_be_printed_ids:
+            moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
+            not_printed_labels += moves.ids
+        _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
+        labels_to_be_printed = len(not_printed_labels)
         longer_than_90_days = self.search_count(base_domain + [
             ('actual_date_of_arrival', '!=', False),
             ('actual_date_of_arrival', '<', ninety_days_ago),
-            ('inventory_status', 'not in', ['done', 'cancelled'])
+            ('inventory_status', 'not in', ['done', 'cancelled']),
+            ('financial_id', '!=', False)
         ])
         
         open_osd_inventory = self.search_count(base_domain + [
-            ('inventory_status', '=', 'waiting')
+            ('inventory_status', '=', 'arrived'),
+            ('financial_id', '!=', False),
         ])
         
-        displached_items = self.search_count(base_domain + [
+        displaced_items = self.search_count(base_domain + [
             ('warehouse_id', '!=', False),
-            ('inventory_status', '=', 'allocated')
+            ('inventory_status', '=', 'allocated'),
+            ('financial_id', '!=', False)
         ])
         
         dispatched_items = self.search_count(base_domain + [
-            ('inventory_status', '=', 'done')
+            ('inventory_status', '=', 'done'),
+            ('financial_id', '!=', False)
         ])
         
-        return {
+        result ={
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
             'expectedToday': expected_today,
@@ -267,7 +309,48 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displachedItems': displached_items,
+            'displaced_items': displaced_items,
             'dispatchedItems': dispatched_items
         }
-        
+        _logger.info(f"Dashboard data: {result}")
+
+        return result
+
+    @api.model
+    def get_action(self, action_data=None):
+        action_data = action_data or {}
+
+        action_ref = 'warehousing_system.action_warehouse_inventory'
+        action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
+
+        if action_data.get('title'):
+            action['display_name'] = action_data['title']
+
+        if 'domain' in action_data and action_data['domain'] is not None:
+            action['domain'] = action_data['domain']
+
+        ctx_flags = action_data.get('context') or {}
+        if ctx_flags:
+            today = fields.Date.today()
+            tomorrow = today + timedelta(days=1)
+            ninety_days_ago = today - timedelta(days=90)
+
+            if ctx_flags.pop('expectedToday', False):
+                action['domain'].append([('scheduled_date', '=', today)])
+                _logger.info('Today\'s Context')
+            elif ctx_flags.pop('expectedTomorrow', False):
+                action['domain'].append([('scheduled_date', '=', tomorrow)])
+                _logger.info('Tomorrow\'s Context')
+            elif ctx_flags.pop('longerThan90Days', False):
+                action['domain'].append([
+                    ('actual_date_of_arrival', '!=', False),
+                    ('actual_date_of_arrival', '<', ninety_days_ago),
+                    ('inventory_status', 'not in', ['done', 'cancelled'])
+                ])
+                _logger.info('longerThan90Days\'s Context')
+
+            ctx = dict(action.get('context') or {})
+            ctx.update(ctx_flags)
+            action['context'] = ctx
+
+        return {'action': action}

@@ -1,0 +1,276 @@
+<odoo>
+  <data> 
+    <record id="print_waybill_item_report" model="ir.actions.report">
+        <field name="name">WayBill Item</field>
+        <field name="model">stock.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">warehousing_system.waybill_item_print_report_template</field>
+        <field name="report_file">warehousing_system.waybill_item_print_report_template</field>
+        <field name="print_report_name">'WayBill Item - %s' % (object.picking_id.name)</field>
+        <field name="binding_model_id" ref="stock.model_stock_move"/>
+        <field name="binding_type">report</field>
+        <field name="attachment_use">True</field>
+	</record>
+    <template id="waybill_item_print_report_template">
+      <t t-call="web.html_container">
+          <t t-foreach="docs" t-as="o">
+              <t t-call="warehousing_system.waybill_item_print_template"/>
+          </t>
+      </t>
+    </template>
+    <template id="waybill_item_print_template">
+        <t t-call="web.internal_layout">
+            <t t-foreach="docs" t-as="o">
+            <div class="page" style="padding-top: 10px; padding-left: 10px; padding-right: 10px;">
+                <style>
+                 table {
+                    border-collapse: collapse;
+                    margin-bottom: 40px;
+                }
+
+                th {
+                    background-color: #333;
+                    color: #fff;
+                }
+
+                table, th, tr, td, h3 {
+                    font-size: 16px
+                }
+                .title-header {
+                    font-size: 30px 
+                }
+
+                table, th, tr, td {
+                    border:1px solid #999;
+                    font-family: Times New Roman;
+                    margin-bottom: 3px;
+                    font-size: 12px
+                } 
+                th, td{
+                    padding: 5px;
+                }
+
+                td:nth-child(4) {
+                    color: black;
+                }
+                .accounthead {
+                    background-color: #ccc;
+                } 
+                .outstanding {
+                    color: red;
+                }
+                .qr-code {
+                    weight: 100px;
+                    height: 100px;
+                    padding: 2px;
+                    margin-left: 40%;
+                    <!-- margin-right: 100px; -->
+                    align: center;
+                }
+
+                .flex-color {
+                    background-color:rgb(17, 3, 3);
+                    text-align: left;
+                    color: #ffffff
+                }
+                .header-flex-color {
+                    background-color:rgb(252, 251, 251);
+                    text-align: left;
+                    color:rgb(16, 4, 4)
+                }
+                .customer-detail {
+                    color:rgb(27, 7, 7);
+                    text-align: center; 
+                    font-size: 30px; 
+                    padding: 1px
+                }
+                .header-detail {
+                    color:rgb(12, 4, 4);
+                    font-size: 10px; 
+                    padding: 1px;
+                }
+                .logo-text {
+                    weight: 50px;
+                    height: 50px;
+                    padding: 4px;
+                    margin-left: 0%;
+                }
+                </style>
+                <!-- HEADER SECTION-->
+                <!-- <div class="row">
+                    <div class="col-2">
+                        <span class="title-header"> Address </span> 
+                    </div>
+                    <div class="col-2 offset-2 text-center">
+                    </div>
+                    <div class="col-2 offset-3 text-end">
+                        <img t-if="user.company_id" t-att-src="image_data_uri(user.company_id.logo)" style="max-height: 100px;max-width: 200px;" alt="Logo"/>
+                    </div>
+                </div>
+                <hr/>  -->
+                <!-- <div class="row flex-color p-3">
+                    <div class="col-2">
+                        <span class="report-header"> <t t-esc="o.name"/> <p> <span class="report-header"> <t t-esc="o.client_id.name"/></span></p> </span> 
+                    </div>
+                    <div class="col-2 text-center">
+                    </div>
+                    <div class="col-2 offset-5 text-end">
+                        <strong><span class="report-header"> <t t-esc="o.code"/> </span></strong>
+                    </div>
+                </div> -->
+                <!-- <div class="row p-2">
+                    <p>
+                        <h2>
+                            <span class="customer-detail"> 
+                                <t t-esc="o.picking_id.partner_id"/>
+                            </span>
+                        </h2>
+                    </p> 
+                    <p>
+                        <h3>
+                            <span class="report-header">
+                                <t t-esc="o.picking_id.financial_id.code"/>
+                            </span>
+                        </h3>
+                    </p>
+                    <p>
+                        <h3>
+                            <span class="report-header">
+                                <img class="logo" t-attf-src="data:image/*;base64,{{o.qr_code}}" style="width:80px;height:80px" align="center"/> 
+                            </span>
+                        </h3>
+                    </p>
+                </div> -->
+                 
+                 <!-- <div class='row'>
+                    <div class="col-2">
+                         <span class="report-header">Order Size: <t t-esc="len([r.id for r in o.waybill_ids])"/> item(s)</span>
+                    </div>
+                    <div class="col-2 offset-2 text-center">
+                    </div>
+                    <div class="col-2 offset-3 text-end">
+                        <span class="report-header"><t t-esc="o.write_uid.name"/><p><span class="report-header"> <t t-esc="datetime.datetime.now().strftime('%B %d, %Y')"/></span></p> </span> 
+                    </div>
+                </div> -->
+                 
+                <div class="d-flex bd-highlight center m">
+                    <div class="p-2 flex-grow-1 bd-highlight">
+                        <div class="row header-flex-color p-1">
+                            <div class="col-4">
+                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.street"/></span>
+                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.city"/></span>
+                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.state_id.name"/>, <t t-esc="o.write_uid.company_id.country_id.name"/></span>
+                            </div>
+                            <div class="col-2 text-center">
+                            </div>
+                            <div class="col-2 offset-4 text-end">
+                                <img class="logo-text" t-attf-src="data:image/*;base64,{{o.write_uid.company_id.logo}}"/> 
+                            </div>
+                        </div>
+                        <hr/>
+                        <div class="customer-detail">
+                            <span class="text-center"> 
+                                <t t-esc="o.picking_id.partner_id.name"/>
+                            </span>
+                        </div>
+                        <div class="customer-detail">
+                            <span class="text-center">
+                                <t t-esc="o.picking_id.financial_id.code"/>
+                            </span>
+                        </div>
+                        <img class="logo text-center qr-code" t-attf-src="data:image/*;base64,{{o.qr_code}}"/> 
+                        <h3 class="text-bold text-center flex-color p-2">ITEM DETAILS</h3>
+                        <div class="table-responsive mt-0">
+                            <table style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th width="40%">
+                                        </th>
+                                        <th width="60%">
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Item Description </h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.product_id.name"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Critical Level</h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.critical_equipment"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Unit: </h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.product_uom.name"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold"> Related Inbound Shipment </h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.related_inbound_shipment.name or ''"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Arrival time</h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.actual_date_of_arrival"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Supplier Po Number</h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.supplier_po_number"/></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Customer Po Number</h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.receiving_waybill_number" /></h3>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h3 class="text-bold">Our file Number</h3>
+                                        </td>
+                                        <td>
+                                            <h3 class="text-bold"><t t-esc="o.picking_id.financial_id.code" /></h3>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div> 
+                        <p><h6 class="text-center p-0">Allocated Storage Area</h6></p>
+                        <p><h1 class="text-bold text-center p-0"><t t-esc="o.picking_id.location_dest_id.name"/></h1></p>
+
+                        <!-- <div class='row'>
+                            <h6 class="text flex-color p-2">Allocated Storage Area</h6>
+                            <h2 class="text-bold flex-color p-2"><t t-esc="o.picking_id.location_dest_id.name"/></h2>
+                        </div>  -->
+                    </div>
+                         
+                </div>   
+            </div>
+        </t>
+      </t>
+    </template>
+  </data>
+</odoo>
