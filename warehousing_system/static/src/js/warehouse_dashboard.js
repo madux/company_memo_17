@@ -86,35 +86,6 @@ class WarehouseDashboard extends Component {
                 dispatchedItems: 0
             };
             
-            // if (stats) {
-            //     this.state.stats = {
-            //         waitingForInfo: stats.waitingForInfo || 0,
-            //         expectedTomorrow: stats.expectedTomorrow || 0,
-            //         expectedToday: stats.expectedToday || 0,
-            //         toBePutInStock: stats.toBePutInStock || 0,
-            //         withoutAllocatedStorage: stats.withoutAllocatedStorage || 0,
-            //         labelsToBePrinted: stats.labelsToBePrinted || 0,
-            //         longerThan90Days: stats.longerThan90Days || 0,
-            //         openOSDInventory: stats.openOSDInventory || 0,
-            //         displacedItems: stats.displacedItems || 0,
-            //         dispatchedItems: stats.dispatchedItems || 0
-            //     };
-            //     console.log("Dashboard stats updated:", this.state.stats);
-            // } else {
-            //     console.warn("No stats data returned from the server");
-            //     this.state.stats = {
-            //         waitingForInfo: 0,
-            //         expectedTomorrow: 0,
-            //         expectedToday: 0,
-            //         toBePutInStock: 0,
-            //         withoutAllocatedStorage: 0,
-            //         labelsToBePrinted: 0,
-            //         longerThan90Days: 0,
-            //         openOSDInventory: 0,
-            //         displacedItems: 0,
-            //         dispatchedItems: 0
-            //     };
-            // }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             this.notificationService.add(
