@@ -210,37 +210,37 @@ class WarehouseInventory(models.Model):
         # if filters.get('projectNo') and filters['projectNo'].strip():
         #     base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
         
-        if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-            month_mapping = {
-                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-            }
+        # if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
+        #     month_mapping = {
+        #         'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        #         'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+        #     }
             
-            year = fields.Date.today().year
-            if filters.get('year') and filters['year'] != 'All':
-                try:
-                    year = int(filters['year'])
-                except (ValueError, TypeError):
-                    pass
+        #     year = fields.Date.today().year
+        #     if filters.get('year') and filters['year'] != 'All':
+        #         try:
+        #             year = int(filters['year'])
+        #         except (ValueError, TypeError):
+        #             pass
             
-            if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
-                month_num = month_mapping[filters['month']]
-                start_date = fields.Date.to_string(date(year, month_num, 1))
+        #     if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
+        #         month_num = month_mapping[filters['month']]
+        #         start_date = fields.Date.to_string(date(year, month_num, 1))
                 
-                if month_num == 12:
-                    end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                else:
-                    end_date = fields.Date.to_string(date(year, month_num + 1, 1))
+        #         if month_num == 12:
+        #             end_date = fields.Date.to_string(date(year + 1, 1, 1))
+        #         else:
+        #             end_date = fields.Date.to_string(date(year, month_num + 1, 1))
                     
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
-            elif filters.get('year') and filters['year'] != 'All':
-                start_date = fields.Date.to_string(date(year, 1, 1))
-                end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
+        #         base_domain.append(('create_date', '>=', start_date))
+        #         base_domain.append(('create_date', '<', end_date))
+        #     elif filters.get('year') and filters['year'] != 'All':
+        #         start_date = fields.Date.to_string(date(year, 1, 1))
+        #         end_date = fields.Date.to_string(date(year + 1, 1, 1))
+        #         base_domain.append(('create_date', '>=', start_date))
+        #         base_domain.append(('create_date', '<', end_date))
             
-            return base_domain
+        return base_domain
     
     
     @api.model
@@ -337,39 +337,47 @@ class WarehouseInventory(models.Model):
 
         action_ref = 'warehousing_system.action_warehouse_inventory_receipts'
         action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
+        
+        _logger.info("get_action python method..........")
 
         if action_data.get('title'):
             action['display_name'] = action_data['title']
+            _logger.info("Title added")
             
         if 'domain' in action_data and action_data['domain'] is not None:
-            action['domain'] = action_data['domain']
+            dom = [tuple(rec) for rec in action_data['domain']]
+            action['domain'] = dom
+            _logger.info(f'Domain Incoming = {action_data['domain']} and converted = {dom}')
             
         if action_data.get('filterData'):
-            base_domain = self.get_base_domain(action_data['filterData'])
+            base_domain = self.get_base_domain(action_data['filterData']) or []
+            # _logger.info(f'Base domain: {base_domain}')
             if base_domain:
-                action['domain'].append(base_domain)
+                action['domain'] += base_domain
+                
+        _logger.info(f'Whole Domain = {action['domain']}')
 
         ctx_flags = action_data.get('context') or {}
+        _logger.info(f'conext {ctx_flags}')
         if ctx_flags:
             today = fields.Date.today()
             tomorrow = today + timedelta(days=1)
             ninety_days_ago = today - timedelta(days=90)
             
             if ctx_flags.pop('expectedToday', False):
-                action['domain'].append([('scheduled_date', '=', today)])
-                _logger.info('Today\'s Context')
+                action['domain'].append(('scheduled_date', '=', today))
+                _logger.info(f'Today\'s Context..................{action['domain']}')
             elif ctx_flags.pop('expectedTomorrow', False):
-                action['domain'].append([('scheduled_date', '=', tomorrow)])
-                _logger.info('Tomorrow\'s Context')
+                action['domain'].append(('scheduled_date', '=', tomorrow))
+                _logger.info(f'Tomorrow\'s Context = {action['domain']}')
             elif ctx_flags.pop('longerThan90Days', False):
-                action['domain'].append([
+                action['domain'] += [
                     ('actual_date_of_arrival', '!=', False),
                     ('actual_date_of_arrival', '<', ninety_days_ago),
-                    ('inventory_status', 'not in', ['done', 'cancelled'])
-                ])
-                _logger.info('longerThan90Days\'s Context')
+                    ('inventory_status', 'not in', ['done', 'cancelled'])]
+                _logger.info(f'longerThan90Days\'s Context = {action['domain']}')
                 
-            ctx = dict(action.get('context') or {})
+            ctx = {}
             ctx.update(ctx_flags)
             action['context'] = ctx
 
