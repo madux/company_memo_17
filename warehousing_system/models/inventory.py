@@ -270,7 +270,6 @@ class WarehouseInventory(models.Model):
         waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft'), ('financial_id', '!=', False)])
         expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
         expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
         to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)])
         without_allocated_storage = self.search_count(base_domain + [
             ('warehouse_id', '=', False),
@@ -302,7 +301,6 @@ class WarehouseInventory(models.Model):
         open_osd_inventory = self.search_count(base_domain + [
             ('inventory_status', '=', 'arrived'),
             ('financial_id', '!=', False),
-            ('inventory_status', '=', 'arrived')
         ])
         
         displaced_items = self.search_count(base_domain + [
