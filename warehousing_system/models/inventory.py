@@ -259,13 +259,16 @@ class WarehouseInventory(models.Model):
         return [
             ('warehouse_id', '=', False),
             ('financial_id', '!=', False),
-            ('inventory_status', 'in', ['draft', 'cancelled'])
+            ('inventory_status', 'in', ['draft', 'cancelled']),
+            ('move_ids_without_package.is_label_printed', '=', False)
         ]
     
     def labels_to_be_printed_domain(self):
         return [
             ('inventory_status', 'not in', ['draft', 'cancelled']),
             ('financial_id', '!=', False),
+            ('move_ids_without_package', '!=', False),
+            ('move_ids_without_package.is_label_printed', '=', False)
         ]
         
     def open_osd_inventory_domain(self):
@@ -313,15 +316,17 @@ class WarehouseInventory(models.Model):
         to_be_put_in_stock = self.search_count(base_domain + self.to_be_put_in_stock_domain())
         without_allocated_storage = self.search_count(base_domain + self.without_allocated_storage_domain())
         
-        labels_to_be_printed_ids = self.search(base_domain + self.labels_to_be_printed_domain())
-        not_printed_labels = []
-        pickings_not_printed = []
-        for lb in labels_to_be_printed_ids:
-            moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
-            not_printed_labels += moves.ids
-            pickings_not_printed += [m.picking_id.id for m in moves] # 54
+        # labels_to_be_printed_ids = self.search(base_domain + self.labels_to_be_printed_domain())
+        # not_printed_labels = []
+        # pickings_not_printed = []
+        # for lb in labels_to_be_printed_ids:
+        #     moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
+        #     not_printed_labels += moves.ids
+        #     pickings_not_printed += [m.picking_id.id for m in moves] # 54
             
-        _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
+        # _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
+        
+        not_printed_labels = self.search(base_domain + self.labels_to_be_printed_domain())
         labels_to_be_printed = len(not_printed_labels)
         
         longer_than_90_days = self.search_count(base_domain + self.expected_date_domain(90))
@@ -362,29 +367,21 @@ class WarehouseInventory(models.Model):
             action['display_name'] = action_data['title']
             _logger.info("Title added")
             
-        if action_data.get('cardSelected') and action_data.get('cardSelected') is not None:
-            if action_data.get('cardSelected') == 'waitingForInfo':
-                action['domain'] += self.waiting_for_info_domain()
-            elif action_data.get('cardSelected') == 'expectedTomorrow':
-                action['domain'] += self.expected_date_domain(1)
-            elif action_data.get('cardSelected') == 'expectedToday':
-                action['domain'] += self.expected_date_domain(0)
-            elif action_data.get('cardSelected') == 'expectedTomorrow':
-                action['domain'] += self.expected_date_domain(1)
-            elif action_data.get('cardSelected') == 'toBePutInStock':
-                action['domain'] += self.to_be_put_in_stock_domain()
-            elif action_data.get('cardSelected') == 'withoutAllocatedStorage':
-                action['domain'] += self.without_allocated_storage_domain()
-            elif action_data.get('cardSelected') == 'labelsToBePrinted':
-                action['domain'] += self.labels_to_be_printed_domain()
-            elif action_data.get('cardSelected') == 'longerThan90Days':
-                action['domain'] += self.expected_date_domain(90)
-            elif action_data.get('cardSelected') == 'openOSDInventory':
-                action['domain'] += self.open_osd_inventory_domain()
-            elif action_data.get('cardSelected') == 'displacedItems':
-                action['domain'] += self.displaced_items_domain()
-            elif action_data.get('cardSelected') == 'dispatchedItems':
-                action['domain'] += self.dispatched_items_domain()
+        domain_map = {
+            'waitingForInfo':        self.waiting_for_info_domain,
+            'expectedTomorrow':      lambda: self.expected_date_domain(1),
+            'expectedToday':         lambda: self.expected_date_domain(0),
+            'toBePutInStock':        self.to_be_put_in_stock_domain,
+            'withoutAllocatedStorage': self.without_allocated_storage_domain,
+            'labelsToBePrinted':     self.labels_to_be_printed_domain,
+            'longerThan90Days':      lambda: self.expected_date_domain(90),
+            'openOSDInventory':      self.open_osd_inventory_domain,
+            'displacedItems':        self.displaced_items_domain,
+            'dispatchedItems':       self.dispatched_items_domain,
+        }
+        card = action_data.get('cardSelected')
+        if card in domain_map:
+            action['domain'] = domain_map[card]()
             
         if action_data.get('filterData'):
             base_domain = self.get_base_domain(action_data['filterData']) or []
