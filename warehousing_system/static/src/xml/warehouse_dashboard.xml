@@ -12,12 +12,11 @@
                    placeholder="Search by client name" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'client')" />
           </div>
-          <div class="col">
+          <!-- <div class="col">
             <label>File Type</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
               <t t-foreach="state.statusOptions" t-as="option" t-key="option.id">
-                <!-- <option t-att-value="option.id" t-att-selected="state.filters.fileType === option.id"> -->
-                <option t-att-value="option.id">
+                <option t-att-value="option.id" t-att-selected="state.filters.fileType === option.id">
                   <t t-esc="option.name"/>
                 </option>
               </t>
@@ -28,25 +27,12 @@
             <input type="text" class="form-control" t-att-value="state.filters.projectNo" 
                    placeholder="Search by project number" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'projectNo')" />
-          </div>
+          </div> -->
           <div class="col">
             <label>Month</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
               <option value="All" t-att-selected="state.filters.month === 'All'">All</option>
-              <option value="All">All</option>
-              <option value="Jan">Jan</option>
-              <option value="Feb">Feb</option>
-              <option value="Mar">Mar</option>
-              <option value="Apr">Apr</option>
-              <option value="May">May</option>
-              <option value="Jun">Jun</option>
-              <option value="Jul">Jul</option>
-              <option value="Aug">Aug</option>
-              <option value="Sep">Sep</option>
-              <option value="Oct">Oct</option>
-              <option value="Nov">Nov</option>
-              <option value="Dec">Dec</option>
-              <!--<option value="Jan" t-att-selected="state.filters.month === 'Jan'">Jan</option>
+              <option value="Jan" t-att-selected="state.filters.month === 'Jan'">Jan</option>
               <option value="Feb" t-att-selected="state.filters.month === 'Feb'">Feb</option>
               <option value="Mar" t-att-selected="state.filters.month === 'Mar'">Mar</option>
               <option value="Apr" t-att-selected="state.filters.month === 'Apr'">Apr</option>
@@ -57,27 +43,23 @@
               <option value="Sep" t-att-selected="state.filters.month === 'Sep'">Sep</option>
               <option value="Oct" t-att-selected="state.filters.month === 'Oct'">Oct</option>
               <option value="Nov" t-att-selected="state.filters.month === 'Nov'">Nov</option>
-              <option value="Dec" t-att-selected="state.filters.month === 'Dec'">Dec</option> -->
+              <option value="Dec" t-att-selected="state.filters.month === 'Dec'">Dec</option>
             </select>
           </div>
           <div class="col">
             <label>Year</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'year')">
               <option value="All" t-att-selected="state.filters.year === 'All'">All</option>
-              <option value="2025">2025</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <!-- <option value="2025" t-att-selected="state.filters.year === '2025'">2025</option>
+              <option value="2025" t-att-selected="state.filters.year === '2025'">2025</option>
               <option value="2024" t-att-selected="state.filters.year === '2024'">2024</option>
-              <option value="2023" t-att-selected="state.filters.year === '2023'">2023</option> -->
+              <option value="2023" t-att-selected="state.filters.year === '2023'">2023</option>
             </select>
           </div>
         </div>
       </div>
 
       <div class="dashboard-cards">
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft']], 'Inventory Items Waiting for Info')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft']], {}, 'Inventory Items Waiting for Info')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', [['inventory_status', '=', 'draft'], ['financial_id', '!=', False]], {}, 'Inventory Items Waiting for Info')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-info-circle"/></div>
             <div class="card-count"><t t-esc="state.stats.waitingForInfo"/></div>
@@ -85,7 +67,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow',[], {'expectedTomorrow': True}, 'Inventory Items Expected Tomorrow')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow',[['financial_id', '!=', False]], {'expectedTomorrow': true}, 'Inventory Items Expected Tomorrow')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
             <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
@@ -93,8 +75,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', [['expected_arrival_date', '=', 'today']], 'Inventory Items Expected Today')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', [], {'expectedToday': True}, 'Inventory Items Expected Today')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', [['financial_id', '!=', False]], {'expectedToday': true}, 'Inventory Items Expected Today')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-clock-o"/></div>
             <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
@@ -102,8 +83,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', [['inventory_status', '=', 'arrived']], 'Items to be Put in Stock')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', [['inventory_status', '=', 'arrived']], {}, 'Items to be Put in Stock')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', [['inventory_status', '=', 'arrived'], ['financial_id', '!=', False]], {}, 'Items to be Put in Stock')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-cart-plus"/></div>
             <div class="card-count"><t t-esc="state.stats.toBePutInStock"/></div>
@@ -111,8 +91,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', false], ['inventory_status', 'not in', ['draft','cancelled']]], 'Inventory Items without Allocated Storage')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', False], ['inventory_status', 'not in', ['draft','cancelled']]], {}, 'Inventory Items without Allocated Storage')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', [['warehouse_id', '=', False], ['financial_id', '!=', False], ['inventory_status', 'in', ['draft','cancelled']]], {}, 'Inventory Items without Allocated Storage')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-ban"/></div>
             <div class="card-count"><t t-esc="state.stats.withoutAllocatedStorage"/></div>
@@ -120,7 +99,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', [], 'Labels to be Printed')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', [['inventory_status', 'not in', ['draft', 'cancelled']], ['financial_id', '!=', False], ['move_ids_without_package', '!=', false], ['move_ids_without_package.is_label_printed', '=', false]], {}, 'Labels to be Printed')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-print"/></div>
             <div class="card-count"><t t-esc="state.stats.labelsToBePrinted"/></div>
@@ -128,8 +107,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', [], 'Inventory Items >90 Days in Stock')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', [], {'longerThan90Days': True}, 'Inventory Items >90 Days in Stock')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', [['inventory_status', 'not in', ['done', 'cancelled']], ['financial_id', '!=', False]], {'longerThan90Days': true}, 'Inventory Items >90 Days in Stock')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
             <div class="card-count"><t t-esc="state.stats.longerThan90Days"/></div>
@@ -137,8 +115,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [['inventory_status', '=', 'waiting']], 'Open OS&amp;D Inventory in Stock')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [['inventory_status', '=', 'arrived']], {}, 'Open OS&amp;D Inventory in Stock')">  
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', [['inventory_status', '=', 'arrived'], ['financial_id', '!=', False]], {}, 'Open OS&amp;D Inventory in Stock')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-unlock-alt"/></div>
             <div class="card-count"><t t-esc="state.stats.openOSDInventory"/></div>
@@ -146,8 +123,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [['warehouse_id', '!=', false], ['inventory_status', '=', 'allocated']], 'Inventory Items Displaced')"> -->
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [['warehouse_id', '!=', False], ['inventory_status', '=', 'allocated']], {}, 'Inventory Items Displaced')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', [['warehouse_id', '!=', False], ['inventory_status', '=', 'allocated'], ['financial_id', '!=', False]], {}, 'Inventory Items Displaced')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-truck-moving"/></div>
             <div class="card-count"><t t-esc="state.stats.displacedItems"/></div>
@@ -155,7 +131,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today_alt', [['expected_arrival_date','=', 'today']], 'Inventory Items Expected Today (Alt)')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today_alt', [], {'expectedToday': true}, 'Inventory Items Expected Today (Alt)')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-cloud"/></div>
             <div class="card-count"><t t-esc="state.stats.expectedToday"/></div>
@@ -163,7 +139,7 @@
           </div>
         </div>
 
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [['expected_arrival_date','=', 'tomorrow']], 'Inventory Items Expected Tomorrow (Alt)')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', [], {'expectedTomorrow': true}, 'Inventory Items Expected Tomorrow (Alt)')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-cloud"/></div>
             <div class="card-count"><t t-esc="state.stats.expectedTomorrow"/></div>
@@ -171,10 +147,10 @@
           </div>
         </div>
         
-        <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', [], 'Inventory Items Dispatched')">
+        <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', [['inventory_status', '=', 'done'], ['financial_id', '!=', False]], {}, 'Inventory Items Dispatched')">
           <div class="warehouse-card red-card">
             <div class="card-icon"><i class="fa fa-truck"/></div>
-            <div class="card-count"><t t-esc="state.stats.dispatchedItems || 0"/></div>
+            <div class="card-count"><t t-esc="state.stats.dispatchedItems"/></div>
             <div class="card-title">Inventory Items Dispatched</div>
           </div>
         </div>

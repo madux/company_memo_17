@@ -4,6 +4,10 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+import logging
+
+_logger = logging.getLogger(__name__)
+    
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
     
@@ -190,7 +194,55 @@ class WarehouseInventory(models.Model):
         res = super(WarehouseInventory, self).action_cancel()
         self.inventory_status = 'cancelled'
         return res
-                 
+    
+    
+    def get_base_domain(self, filters):
+        base_domain = []
+         
+        if filters.get('client') and filters['client'].strip():
+            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
+            _logger.info(f'Customer: {base_domain}')
+        
+        # if filters.get('fileType'):
+        #     # base_domain.append(('inventory_status', '=', filters['fileType']))
+        #     _logger.info('Not implemented...continuing with warehouse')
+        
+        # if filters.get('projectNo') and filters['projectNo'].strip():
+        #     base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
+        
+        # if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
+        #     month_mapping = {
+        #         'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        #         'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+        #     }
+            
+        #     year = fields.Date.today().year
+        #     if filters.get('year') and filters['year'] != 'All':
+        #         try:
+        #             year = int(filters['year'])
+        #         except (ValueError, TypeError):
+        #             pass
+            
+        #     if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
+        #         month_num = month_mapping[filters['month']]
+        #         start_date = fields.Date.to_string(date(year, month_num, 1))
+                
+        #         if month_num == 12:
+        #             end_date = fields.Date.to_string(date(year + 1, 1, 1))
+        #         else:
+        #             end_date = fields.Date.to_string(date(year, month_num + 1, 1))
+                    
+        #         base_domain.append(('create_date', '>=', start_date))
+        #         base_domain.append(('create_date', '<', end_date))
+        #     elif filters.get('year') and filters['year'] != 'All':
+        #         start_date = fields.Date.to_string(date(year, 1, 1))
+        #         end_date = fields.Date.to_string(date(year + 1, 1, 1))
+        #         base_domain.append(('create_date', '>=', start_date))
+        #         base_domain.append(('create_date', '<', end_date))
+            
+        return base_domain
+    
+    
     @api.model
     def get_warehouse_dashboard_data(self, filters=None):
         """
@@ -208,59 +260,17 @@ class WarehouseInventory(models.Model):
         if not filters:
             filters = {}
             
-        base_domain = []
-        
-        if filters.get('client') and filters['client'].strip():
-            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
-        
-        if filters.get('fileType'): # and filters['fileType'] != 'warehouse':
-            # ['warehouse', 'procurement', 'agency', 'cfwd', 'transport', 'travel']
-            base_domain.append(('financial_id.memo_project_type', '=', filters['fileType']))
-            _logger.info('Not implemented...continuing with warehouse')
-        
-        if filters.get('projectNo') and filters['projectNo'].strip():
-            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
-            
-        if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-            month_mapping = {
-                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-            }
-            
-            year = fields.Date.today().year
-            if filters.get('year') and filters['year'] != 'All':
-                try:
-                    year = int(filters['year'])
-                except (ValueError, TypeError):
-                    pass
-            
-            if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
-                month_num = month_mapping[filters['month']]
-                start_date = fields.Date.to_string(date(year, month_num, 1))
-                
-                if month_num == 12:
-                    end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                else:
-                    end_date = fields.Date.to_string(date(year, month_num + 1, 1))
-                    
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
-            elif filters.get('year') and filters['year'] != 'All':
-                start_date = fields.Date.to_string(date(year, 1, 1))
-                end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
+        base_domain = self.get_base_domain(filters) or []
+        _logger.info(f'Base: Domain: {base_domain}')
         
         today = fields.Date.today()
         tomorrow = today + timedelta(days=1)
         ninety_days_ago = today - timedelta(days=90)
         
-        waiting_for_info = self.search_count([('inventory_status', '=', 'draft'), ('financial_id', '!=', False)] + base_domain) #base_domain + [('inventory_status', '=', 'draft')])
+        waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft'), ('financial_id', '!=', False)])
         expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
         expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
         to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)])
-        
         without_allocated_storage = self.search_count(base_domain + [
             ('warehouse_id', '=', False),
             ('financial_id', '!=', False),
@@ -272,11 +282,15 @@ class WarehouseInventory(models.Model):
             ('financial_id', '!=', False),
         ])
         not_printed_labels = []
+        pickings_not_printed = []
         for lb in labels_to_be_printed_ids:
             moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
             not_printed_labels += moves.ids
+            pickings_not_printed += [m.picking_id.id for m in moves] # 54
+            
         _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
         labels_to_be_printed = len(not_printed_labels)
+        
         longer_than_90_days = self.search_count(base_domain + [
             ('actual_date_of_arrival', '!=', False),
             ('actual_date_of_arrival', '<', ninety_days_ago),
@@ -300,7 +314,7 @@ class WarehouseInventory(models.Model):
             ('financial_id', '!=', False)
         ])
         
-        result ={
+        result = {
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
             'expectedToday': expected_today,
@@ -309,47 +323,61 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displaced_items': displaced_items,
+            'displacedItems': displaced_items,
             'dispatchedItems': dispatched_items
         }
+        
         _logger.info(f"Dashboard data: {result}")
-
+        
         return result
 
     @api.model
     def get_action(self, action_data=None):
         action_data = action_data or {}
 
-        action_ref = 'warehousing_system.action_warehouse_inventory'
+        action_ref = 'warehousing_system.action_warehouse_inventory_receipts'
         action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
+        
+        _logger.info("get_action python method..........")
 
         if action_data.get('title'):
             action['display_name'] = action_data['title']
-
+            _logger.info("Title added")
+            
         if 'domain' in action_data and action_data['domain'] is not None:
-            action['domain'] = action_data['domain']
+            dom = [tuple(rec) for rec in action_data['domain']]
+            action['domain'] = dom
+            _logger.info(f'Domain Incoming = {action_data['domain']} and converted = {dom}')
+            
+        if action_data.get('filterData'):
+            base_domain = self.get_base_domain(action_data['filterData']) or []
+            # _logger.info(f'Base domain: {base_domain}')
+            if base_domain:
+                action['domain'] += base_domain
+                
+        _logger.info(f'Whole Domain = {action['domain']}')
 
         ctx_flags = action_data.get('context') or {}
+        _logger.info(f'conext {ctx_flags}')
         if ctx_flags:
             today = fields.Date.today()
             tomorrow = today + timedelta(days=1)
             ninety_days_ago = today - timedelta(days=90)
-
+            
             if ctx_flags.pop('expectedToday', False):
-                action['domain'].append([('scheduled_date', '=', today)])
-                _logger.info('Today\'s Context')
+                action['domain'].append(('scheduled_date', '=', today))
+                _logger.info(f'Today\'s Context..................{action['domain']}')
             elif ctx_flags.pop('expectedTomorrow', False):
-                action['domain'].append([('scheduled_date', '=', tomorrow)])
-                _logger.info('Tomorrow\'s Context')
+                action['domain'].append(('scheduled_date', '=', tomorrow))
+                _logger.info(f'Tomorrow\'s Context = {action['domain']}')
             elif ctx_flags.pop('longerThan90Days', False):
-                action['domain'].append([
+                action['domain'] += [
                     ('actual_date_of_arrival', '!=', False),
                     ('actual_date_of_arrival', '<', ninety_days_ago),
-                    ('inventory_status', 'not in', ['done', 'cancelled'])
-                ])
-                _logger.info('longerThan90Days\'s Context')
-
-            ctx = dict(action.get('context') or {})
+                    ('inventory_status', 'not in', ['done', 'cancelled'])]
+                _logger.info(f'longerThan90Days\'s Context = {action['domain']}')
+                
+            ctx = {}
             ctx.update(ctx_flags)
             action['context'] = ctx
 
