@@ -196,35 +196,19 @@ class WarehouseInventory(models.Model):
         return res
     
     
-    @api.model
-    def get_warehouse_dashboard_data(self, filters=None):
-        """
-        This method fetches all the necessary data for the warehouse dashboard
-        Returns a dictionary with counts for different inventory statuses
-        
-        Args:
-            filters: A dictionary with filter values
-                - client: Text to search in customer_id.name
-                - fileType: Inventory status
-                - projectNo: Supplier PO number
-                - month: Month for create_date
-                - year: Year for create_date
-        """
-        if not filters:
-            filters = {}
-            
+    def get_base_domain(self, filters):
         base_domain = []
-        
+         
         if filters.get('client') and filters['client'].strip():
             base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
             _logger.info(f'Customer: {base_domain}')
         
-        if filters.get('fileType'):
-            # base_domain.append(('inventory_status', '=', filters['fileType']))
-            _logger.info('Not implemented...continuing with warehouse')
+        # if filters.get('fileType'):
+        #     # base_domain.append(('inventory_status', '=', filters['fileType']))
+        #     _logger.info('Not implemented...continuing with warehouse')
         
-        if filters.get('projectNo') and filters['projectNo'].strip():
-            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
+        # if filters.get('projectNo') and filters['projectNo'].strip():
+        #     base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
         
         if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
             month_mapping = {
@@ -255,12 +239,35 @@ class WarehouseInventory(models.Model):
                 end_date = fields.Date.to_string(date(year + 1, 1, 1))
                 base_domain.append(('create_date', '>=', start_date))
                 base_domain.append(('create_date', '<', end_date))
+            
+            return base_domain
+    
+    
+    @api.model
+    def get_warehouse_dashboard_data(self, filters=None):
+        """
+        This method fetches all the necessary data for the warehouse dashboard
+        Returns a dictionary with counts for different inventory statuses
+        
+        Args:
+            filters: A dictionary with filter values
+                - client: Text to search in customer_id.name
+                - fileType: Inventory status
+                - projectNo: Supplier PO number
+                - month: Month for create_date
+                - year: Year for create_date
+        """
+        if not filters:
+            filters = {}
+            
+        base_domain = self.get_base_domain(filters) or []
+        _logger.info(f'Base: Domain: {base_domain}')
         
         today = fields.Date.today()
         tomorrow = today + timedelta(days=1)
         ninety_days_ago = today - timedelta(days=90)
         
-        waiting_for_info = self.search_count([('inventory_status', '=', 'draft'), ('financial_id', '!=', False)] + base_domain) #base_domain + [('inventory_status', '=', 'draft')])
+        waiting_for_info = self.search_count(base_domain + [('inventory_status', '=', 'draft'), ('financial_id', '!=', False)])
         expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
         expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
         expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
@@ -335,9 +342,14 @@ class WarehouseInventory(models.Model):
 
         if action_data.get('title'):
             action['display_name'] = action_data['title']
-
+            
         if 'domain' in action_data and action_data['domain'] is not None:
             action['domain'] = action_data['domain']
+            
+        if action_data.get('filterData'):
+            base_domain = self.get_base_domain(action_data['filterData'])
+            if base_domain:
+                action['domain'].append(base_domain)
 
         ctx_flags = action_data.get('context') or {}
         if ctx_flags:

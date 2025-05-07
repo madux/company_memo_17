@@ -12,7 +12,7 @@
                    placeholder="Search by client name" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'client')" />
           </div>
-          <div class="col">
+          <!-- <div class="col">
             <label>File Type</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
               <t t-foreach="state.statusOptions" t-as="option" t-key="option.id">
@@ -27,7 +27,7 @@
             <input type="text" class="form-control" t-att-value="state.filters.projectNo" 
                    placeholder="Search by project number" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'projectNo')" />
-          </div>
+          </div> -->
           <div class="col">
             <label>Month</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
