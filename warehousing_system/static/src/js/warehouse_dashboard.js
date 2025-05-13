@@ -82,7 +82,6 @@ class WarehouseDashboard extends Component {
     
     onFilterChange(event, filterName) {
         this.state.filters[filterName] = event.target.value;
-        // this._debouncedFetch();
         this.fetchDashboardData();
     }
 
@@ -100,11 +99,8 @@ class WarehouseDashboard extends Component {
         }, 500);
     }
 
-    async onCardClick(actionName, cardDomain, cardContext, title) {
+    async onCardClick(actionName, cardSelected, title) {
         try {
-            const domain = cardDomain || [];
-            const context = cardContext || {};
-            // const context = cardFlag ? { [cardFlag]: true } : {};
 
             const filterData = {
                 client: this.state.filters.client,
@@ -112,13 +108,9 @@ class WarehouseDashboard extends Component {
                 year: this.state.filters.year
             };
                         
-            console.log('Domain:', domain);
-            console.log('Context:', context);
-
             const actionData = {
                 title: title,
-                domain: domain,
-                context: context,
+                cardSelected: cardSelected || {},
                 filterData
             };
 
