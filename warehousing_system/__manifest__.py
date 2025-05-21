@@ -5,7 +5,7 @@
     'category': '',
     'sequence': 3,
     'summary': 'Used to manage warehouse',
-    'depends': ['base', 'stock', 'purchase', 'web', 'company_memo', 'mail', 'product', 'website'],
+    'depends': ['base', 'stock', 'purchase', 'web', 'company_memo', 'mail', 'product', 'website', 'website_payment'],
     'author': '',
     'data': [ 
         # 'security/ir.model.access.csv',
@@ -17,7 +17,7 @@
         'views/inventory_views.xml',
         'views/warehouse_dashboard_menu.xml',
         'report/waybill_item_report.xml',
-        # 'views/customer_dashboard_assets.xml'
+        'views/customer_dashboard_views.xml'
     ],
     'assets': {
         'web.assets_backend': [
@@ -25,8 +25,11 @@
             'warehousing_system/static/src/js/warehouse_dashboard.js',
             'warehousing_system/static/src/css/warehouse_dashboard_style.css',
         ],
+            'web.assets_qweb': [
+            'warehousing_system/static/src/xml/customer_dashboard_template.xml',
+        ],
         'website.assets_frontend': [
-            'static/src/xml/customer_dashboard_template.xml',
+            # 'static/src/xml/customer_dashboard_template.xml',
             'warehousing_system/static/src/css/customer_dashboard.css',
             'warehousing_system/static/src/js/customer_dashboard.js',
         ],

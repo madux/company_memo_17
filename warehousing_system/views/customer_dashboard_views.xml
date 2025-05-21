@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- 0) Globally override website.layout to stop pulling in web.assets_frontend -->
+  <!-- <template id="override_website_layout_assets" inherit_id="website.layout" name="Restrict Frontend Assets">
+    <xpath expr="//t[@t-call-assets='web.assets_frontend']" position="replace">
+      <t t-call-assets="website.assets_frontend" t-js="false"/>
+    </xpath>
+  </template> -->
+
+  <!-- 1) Your server‐side page template -->
+  <template id="public_warehouse_dashboard_template" name="Public Warehouse Dashboard Page">
+    <t t-call="website.layout">
+      <!-- your page markup… -->
+      <div class="container-fluid mt-4">
+        <div class="row">
+          <div class="col-12">
+            <h1 class="text-center mb-4">Warehouse Inventory Dashboard</h1>
+          </div>
+        </div>
+        <div id="public-warehouse-dashboard" class="mb-5"/>
+      </div>
+    </t>
+  </template>
+</odoo>
