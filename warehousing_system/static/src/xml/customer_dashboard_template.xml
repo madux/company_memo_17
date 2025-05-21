@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- 1) The page that wraps your Owl app -->
+  <template id="customer_dashboard_page" name="Customer Dashboard Page">
+    <t t-call="website.layout">
+      <!-- disable the default web.assets_frontend bundle -->
+      <t t-set="assets_frontend" t-value="False"/>
+      <!-- include only website.assets_frontend (which contains your JS/CSS/XML) -->
+      <t t-call-assets="website.assets_frontend" t-js="false"/>
+
+      <div class="container-fluid mt-4">
+        <div class="row">
+          <div class="col-12">
+            <h1 class="text-center mb-4">Customer Dashboard</h1>
+          </div>
+        </div>
+        <!-- Root element for mounting Owl component -->
+        <div id="public-warehouse-dashboard" class="mb-5"/>
+      </div>
+    </t>
+  </template>
+
+  <!-- 2) Your Owl component’s QWeb template -->
+  <template id="customer_dashboard_owl_template" name="Customer Dashboard Owl Template">
+    <div>
+      <!-- Filters -->
+      <div class="dashboard-filters mb-4">
+        <div class="row">
+          <div class="col-md-4">
+            <label>Client</label>
+            <input type="text" class="form-control" id="client-filter"
+                   placeholder="Search by client name" t-att-value="state.filters.client"/>
+          </div>
+          <div class="col-md-4">
+            <label>Month</label>
+            <select class="form-control" id="month-filter" t-att-value="state.filters.month">
+              <option value="All">All</option>
+              <option value="Jan">Jan</option>
+              <option value="Feb">Feb</option>
+              <option value="Mar">Mar</option>
+              <option value="Apr">Apr</option>
+              <option value="May">May</option>
+              <option value="Jun">Jun</option>
+              <option value="Jul">Jul</option>
+              <option value="Aug">Aug</option>
+              <option value="Sep">Sep</option>
+              <option value="Oct">Oct</option>
+              <option value="Nov">Nov</option>
+              <option value="Dec">Dec</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label>Year</label>
+            <select class="form-control" id="year-filter" t-att-value="state.filters.year">
+              <option value="All">All</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Cards -->
+      <div id="dashboard-cards" class="dashboard-cards">
+        <!-- Loading state -->
+        <div t-if="state.isLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-2">Loading dashboard data...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div t-if="state.hasError" class="alert alert-danger" role="alert">
+          <i class="fa fa-exclamation-triangle mr-2"></i> <t t-esc="state.errorMessage"/>
+        </div>
+        
+        <!-- Dashboard cards -->
+        <t t-if="!state.isLoading and !state.hasError">
+          <!-- Waiting For Info -->
+          <div class="col-card" t-on-click="() => this.showDetailView('waitingForInfo', 'Inventory Items Waiting for Info')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-info-circle"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.waitingForInfo || 0"/></div>
+              <div class="card-title">Inventory Items Waiting for Info</div>
+            </div>
+          </div>
+          
+          <!-- Expected Tomorrow -->
+          <div class="col-card" t-on-click="() => this.showDetailView('expectedTomorrow', 'Inventory Items Expected Tomorrow')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-hourglass-half"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.expectedTomorrow || 0"/></div>
+              <div class="card-title">Inventory Items Expected Tomorrow</div>
+            </div>
+          </div>
+          
+          <!-- Expected Today -->
+          <div class="col-card" t-on-click="() => this.showDetailView('expectedToday', 'Inventory Items Expected Today')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-clock-o"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.expectedToday || 0"/></div>
+              <div class="card-title">Inventory Items Expected Today</div>
+            </div>
+          </div>
+          
+          <!-- To Be Put In Stock -->
+          <div class="col-card" t-on-click="() => this.showDetailView('toBePutInStock', 'Items to be Put in Stock')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-cart-plus"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.toBePutInStock || 0"/></div>
+              <div class="card-title">Items to be Put in Stock</div>
+            </div>
+          </div>
+          
+          <!-- Without Allocated Storage -->
+          <div class="col-card" t-on-click="() => this.showDetailView('withoutAllocatedStorage', 'Inventory Items without Allocated Storage')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-ban"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.withoutAllocatedStorage || 0"/></div>
+              <div class="card-title">Inventory Items without Allocated Storage</div>
+            </div>
+          </div>
+          
+          <!-- Labels To Be Printed -->
+          <div class="col-card" t-on-click="() => this.showDetailView('labelsToBePrinted', 'Labels to be Printed')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-print"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.labelsToBePrinted || 0"/></div>
+              <div class="card-title">Labels to be Printed</div>
+            </div>
+          </div>
+          
+          <!-- Longer Than 90 Days -->
+          <div class="col-card" t-on-click="() => this.showDetailView('longerThan90Days', 'Inventory Items >90 Days in Stock')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-clock-rotate-left"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.longerThan90Days || 0"/></div>
+              <div class="card-title">Inventory Items &gt;90 Days in Stock</div>
+            </div>
+          </div>
+          
+          <!-- Open OSD Inventory -->
+          <div class="col-card" t-on-click="() => this.showDetailView('openOSDInventory', 'Open OS&amp;D Inventory in Stock')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-unlock-alt"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.openOSDInventory || 0"/></div>
+              <div class="card-title">Open OS&amp;D Inventory in Stock</div>
+            </div>
+          </div>
+          
+          <!-- Displaced Items -->
+          <div class="col-card" t-on-click="() => this.showDetailView('displacedItems', 'Inventory Items Displaced')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-truck-moving"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.displacedItems || 0"/></div>
+              <div class="card-title">Inventory Items Displaced</div>
+            </div>
+          </div>
+          
+          <!-- Dispatched Items -->
+          <div class="col-card" t-on-click="() => this.showDetailView('dispatchedItems', 'Inventory Items Dispatched')">
+            <div class="warehouse-card red-card">
+              <div class="card-icon"><i class="fa fa-truck"></i></div>
+              <div class="card-count"><t t-esc="state.dashboardData.dispatchedItems || 0"/></div>
+              <div class="card-title">Inventory Items Dispatched</div>
+            </div>
+          </div>
+        </t>
+      </div>
+
+      <!-- Detail Modal -->
+      <div class="modal fade" id="detailModal" tabindex="-1" role="dialog"
+           aria-labelledby="detailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="detailModalLabel"><t t-esc="state.detailViewTitle"/></h5>
+              <button type="button" class="close" data-dismiss="modal"
+                      aria-label="Close"><span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <!-- Loading state -->
+              <div t-if="state.isDetailLoading" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading details...</p>
+              </div>
+              
+              <!-- Empty state -->
+              <div t-if="!state.isDetailLoading and state.detailData.length === 0" class="alert alert-info" role="alert">
+                <i class="fa fa-info-circle mr-2"></i> No items found for this category.
+              </div>
+              
+              <!-- Detail table -->
+              <div t-if="!state.isDetailLoading and state.detailData.length > 0" class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Client</th>
+                      <th>Status</th>
+                      <th>Scheduled Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr t-foreach="state.detailData" t-as="record" t-key="record.id">
+                      <td><t t-esc="record.name or ''"/></td>
+                      <td><t t-esc="record.client or ''"/></td>
+                      <td><t t-esc="record.status or ''"/></td>
+                      <td><t t-esc="record.scheduled_date or ''"/></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</odoo>

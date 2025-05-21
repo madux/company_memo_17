@@ -1,0 +1,88 @@
+/* Warehouse Dashboard Styles */
+
+/* Card layout */
+.dashboard-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.col-card {
+    flex: 0 0 300px;
+    max-width: 300px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.col-card:hover {
+    transform: translateY(-5px);
+}
+
+.warehouse-card {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.warehouse-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.red-card {
+    border-top: 4px solid #e74c3c;
+}
+
+/* Card elements */
+.card-icon {
+    font-size: 28px;
+    color: #e74c3c;
+    margin-bottom: 15px;
+}
+
+.card-count {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.card-title {
+    font-size: 16px;
+    color: #666;
+    text-align: center;
+}
+
+/* Filter styles */
+.dashboard-filters {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.dashboard-filters label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .col-card {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .dashboard-filters .col-md-4 {
+        margin-bottom: 15px;
+    }
+}

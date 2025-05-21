@@ -391,3 +391,108 @@ class WarehouseInventory(models.Model):
         _logger.info(f'Whole Domain = {action['domain']}')
 
         return {'action': action}
+    
+    
+    
+    # Public mehods
+    @api.model
+    def get_customer_warehouse_dashboard_data(self, filters=None):
+        """
+        Public version of get_warehouse_dashboard_data with additional security measures
+        
+        This method exposes only the necessary data for public dashboard viewing,
+        ensuring sensitive information is not leaked.
+        
+        Args:
+            filters: A dictionary with filter values
+                - client: Text to search in customer_id.name
+                - month: Month for create_date
+                - year: Year for create_date
+        """
+        if not filters:
+            filters = {}
+        
+        base_domain = self.get_base_domain(filters) or []
+        waiting_for_info = self.search_count(base_domain + self.waiting_for_info_domain())
+        expected_tomorrow = self.search_count(base_domain + self.expected_date_domain(1))
+        expected_today = self.search_count(base_domain + self.expected_date_domain(0))
+        to_be_put_in_stock = self.search_count(base_domain + self.to_be_put_in_stock_domain())
+        without_allocated_storage = self.search_count(base_domain + self.without_allocated_storage_domain())
+        
+        not_printed_labels = self.search(base_domain + self.labels_to_be_printed_domain())
+        labels_to_be_printed = len(not_printed_labels)
+        
+        longer_than_90_days = self.search_count(base_domain + self.expected_date_domain(90))
+        open_osd_inventory = self.search_count(base_domain + self.open_osd_inventory_domain())
+        displaced_items = self.search_count(base_domain + self.displaced_items_domain())
+        dispatched_items = self.search_count(base_domain + self.dispatched_items_domain())
+        
+        result = {
+            'waitingForInfo': waiting_for_info,
+            'expectedTomorrow': expected_tomorrow,
+            'expectedToday': expected_today,
+            'toBePutInStock': to_be_put_in_stock,
+            'withoutAllocatedStorage': without_allocated_storage,
+            'labelsToBePrinted': labels_to_be_printed,
+            'longerThan90Days': longer_than_90_days,
+            'openOSDInventory': open_osd_inventory,
+            'displacedItems': displaced_items,
+            'dispatchedItems': dispatched_items
+        }
+        
+        _logger.info(f"Public dashboard data: {result}")
+        
+        return result
+    
+    @api.model
+    def get_customer_dashboard_detail(self, action_data=None):
+        """
+        Public version of get_action that returns data instead of an action
+        
+        Since public users don't have access to Odoo actions, this method
+        returns the filtered data directly.
+        
+        Args:
+            action_data: A dictionary with filtering information
+                - cardSelected: Which dashboard card was clicked
+                - filterData: Additional filters to apply
+        """
+        action_data = action_data or {}
+        
+        domain_map = {
+            'waitingForInfo':        self.waiting_for_info_domain,
+            'expectedTomorrow':      lambda: self.expected_date_domain(1),
+            'expectedToday':         lambda: self.expected_date_domain(0),
+            'toBePutInStock':        self.to_be_put_in_stock_domain,
+            'withoutAllocatedStorage': self.without_allocated_storage_domain,
+            'labelsToBePrinted':     self.labels_to_be_printed_domain,
+            'longerThan90Days':      lambda: self.expected_date_domain(90),
+            'openOSDInventory':      self.open_osd_inventory_domain,
+            'displacedItems':        self.displaced_items_domain,
+            'dispatchedItems':       self.dispatched_items_domain,
+        }
+        
+        domain = []
+        card = action_data.get('cardSelected')
+        if card in domain_map:
+            domain = domain_map[card]()
+            
+        if action_data.get('filterData'):
+            base_domain = self.get_base_domain(action_data['filterData']) or []
+            if base_domain:
+                domain += base_domain
+                
+        
+        records = self.search(domain)
+    
+        result = []
+        for record in records:
+            result.append({
+                'id': record.id,
+                'name': record.name,
+                'client': record.customer_id.name if record.customer_id else '',
+                'status': record.inventory_status,
+                'scheduled_date': record.scheduled_date.strftime('%Y-%m-%d') if record.scheduled_date else '',
+            })
+        
+        return result
