@@ -1,58 +1,7 @@
 /** @odoo-module **/
 
-// For frontend (public) usage, we need to use different imports
-// Check if we're in backend or frontend context
-let Component, useState, onMounted, onWillUnmount;
-let jsonrpc;
-
-if (typeof odoo !== 'undefined' && odoo.define) {
-    // Backend context - use Odoo module system
-    odoo.define('warehousing_system.PublicWarehouseDashboard', function (require) {
-        "use strict";
-        
-        const { Component: OwlComponent, useState: owlUseState, onMounted: owlOnMounted, onWillUnmount: owlOnWillUnmount } = owl;
-        Component = OwlComponent;
-        useState = owlUseState;
-        onMounted = owlOnMounted;
-        onWillUnmount = owlOnWillUnmount;
-        
-        // Use odoo's RPC
-        jsonrpc = function(url, params) {
-            return odoo.jsonRpc(url, 'call', params);
-        };
-        
-        return PublicWarehouseDashboard;
-    });
-} else {
-    // Frontend context - check for global owl
-    if (typeof owl !== 'undefined') {
-        Component = owl.Component;
-        useState = owl.useState;
-        onMounted = owl.onMounted;
-        onWillUnmount = owl.onWillUnmount;
-        
-        // Use fetch for RPC calls in frontend
-        jsonrpc = async function(url, params) {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    method: 'call',
-                    params: params,
-                    id: Math.floor(Math.random() * 1000000)
-                })
-            });
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(data.error.message || 'RPC Error');
-            }
-            return data.result;
-        };
-    }
-}
+// Import OWL components properly for Odoo frontend
+const { Component, useState, onMounted, onWillUnmount, mount } = owl;
 
 /**
  * PublicWarehouseDashboard
@@ -205,14 +154,30 @@ class PublicWarehouseDashboard extends Component {
             
             console.log('Fetching dashboard data with filters:', this.state.filters);
             
-            const result = await jsonrpc('/warehouse/public/dashboard/data', {
-                client: this.state.filters.client,
-                month: this.state.filters.month,
-                year: this.state.filters.year
+            const response = await fetch('/warehouse/public/dashboard/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {
+                        client: this.state.filters.client,
+                        month: this.state.filters.month,
+                        year: this.state.filters.year
+                    },
+                    id: Math.floor(Math.random() * 1000000)
+                })
             });
             
-            console.log('Dashboard data received:', result);
-            this.state.dashboardData = result;
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error.message || 'RPC Error');
+            }
+            
+            console.log('Dashboard data received:', data.result);
+            this.state.dashboardData = data.result || {};
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
             this.state.hasError = true;
@@ -239,16 +204,32 @@ class PublicWarehouseDashboard extends Component {
         }
         
         try {
-            const result = await jsonrpc('/warehouse/public/dashboard/action', {
-                cardSelected: cardId,
-                title: title,
-                client: this.state.filters.client,
-                month: this.state.filters.month,
-                year: this.state.filters.year
+            const response = await fetch('/warehouse/public/dashboard/action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {
+                        cardSelected: cardId,
+                        title: title,
+                        client: this.state.filters.client,
+                        month: this.state.filters.month,
+                        year: this.state.filters.year
+                    },
+                    id: Math.floor(Math.random() * 1000000)
+                })
             });
             
-            console.log('Detail data received:', result);
-            this.state.detailData = Array.isArray(result) ? result : (result[0] || []);
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error.message || 'RPC Error');
+            }
+            
+            console.log('Detail data received:', data.result);
+            this.state.detailData = Array.isArray(data.result) ? data.result : (data.result && data.result[0] ? data.result[0] : []);
         } catch (error) {
             console.error('Error fetching detail data:', error);
             this.state.detailData = [];
@@ -281,10 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('OWL found, mounting component...');
         
         try {
-            // Create and mount the component
-            const env = {}; // Basic environment
-            const component = new PublicWarehouseDashboard(null, { env });
-            component.mount(dashboardEl);
+            // Use OWL's mount function properly
+            const app = mount(PublicWarehouseDashboard, dashboardEl, { 
+                env: {}, 
+                dev: true 
+            });
             console.log('Dashboard component mounted successfully');
         } catch (error) {
             console.error("Error initializing dashboard:", error);
@@ -296,6 +278,27 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
     } else {
-        console.error('Dashboard element not found');
+        console.log('Dashboard element not found, will try again in 1 second...');
+        // Try again after a delay
+        setTimeout(() => {
+            const dashboardEl2 = document.getElementById('public-warehouse-dashboard');
+            if (dashboardEl2) {
+                try {
+                    const app = mount(PublicWarehouseDashboard, dashboardEl2, { 
+                        env: {}, 
+                        dev: true 
+                    });
+                    console.log('Dashboard component mounted successfully (delayed)');
+                } catch (error) {
+                    console.error("Error initializing dashboard (delayed):", error);
+                    dashboardEl2.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fa fa-exclamation-triangle mr-2"></i>
+                            Unable to load the dashboard: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+        }, 1000);
     }
 });

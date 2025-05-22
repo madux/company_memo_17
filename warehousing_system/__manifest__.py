@@ -25,9 +25,9 @@
             'warehousing_system/static/src/js/warehouse_dashboard.js',
             'warehousing_system/static/src/css/warehouse_dashboard_style.css',
         ],
-            'web.assets_qweb': [
-            'warehousing_system/static/src/xml/customer_dashboard_template.xml',
-        ],
+        #     'web.assets_qweb': [
+        #     'warehousing_system/static/src/xml/customer_dashboard_template.xml',
+        # ],
         'web.assets_frontend': [
             'web/static/lib/owl/owl.js',
             'warehousing_system/static/src/xml/customer_dashboard_template.xml',
