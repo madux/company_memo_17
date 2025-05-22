@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-// Alternative approach with inline template
+// Alternative approach with inline template - Fixed loading issue
 (function() {
     'use strict';
 
@@ -65,104 +65,102 @@
                 </div>
                 
                 <!-- Error state -->
-                <div t-if="state.hasError" class="alert alert-danger" role="alert">
+                <div t-elif="state.hasError" class="alert alert-danger" role="alert">
                     <i class="fa fa-exclamation-triangle mr-2"></i> <t t-esc="state.errorMessage"/>
                 </div>
                 
-                <!-- Dashboard cards -->
-                <t t-if="!state.isLoading and !state.hasError">
-                    <div class="row">
-                        <!-- Waiting For Info -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('waitingForInfo', 'Inventory Items Waiting for Info')">
-                                <div class="card-icon"><i class="fa fa-info-circle"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.waitingForInfo || 0"/></div>
-                                <div class="card-title">Inventory Items Waiting for Info</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Expected Tomorrow -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('expectedTomorrow', 'Inventory Items Expected Tomorrow')">
-                                <div class="card-icon"><i class="fa fa-hourglass-half"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.expectedTomorrow || 0"/></div>
-                                <div class="card-title">Inventory Items Expected Tomorrow</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Expected Today -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('expectedToday', 'Inventory Items Expected Today')">
-                                <div class="card-icon"><i class="fa fa-clock-o"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.expectedToday || 0"/></div>
-                                <div class="card-title">Inventory Items Expected Today</div>
-                            </div>
-                        </div>
-                        
-                        <!-- To Be Put In Stock -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('toBePutInStock', 'Items to be Put in Stock')">
-                                <div class="card-icon"><i class="fa fa-cart-plus"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.toBePutInStock || 0"/></div>
-                                <div class="card-title">Items to be Put in Stock</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Without Allocated Storage -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('withoutAllocatedStorage', 'Inventory Items without Allocated Storage')">
-                                <div class="card-icon"><i class="fa fa-ban"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.withoutAllocatedStorage || 0"/></div>
-                                <div class="card-title">Inventory Items without Allocated Storage</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Labels To Be Printed -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('labelsToBePrinted', 'Labels to be Printed')">
-                                <div class="card-icon"><i class="fa fa-print"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.labelsToBePrinted || 0"/></div>
-                                <div class="card-title">Labels to be Printed</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Longer Than 90 Days -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('longerThan90Days', 'Inventory Items >90 Days in Stock')">
-                                <div class="card-icon"><i class="fa fa-clock"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.longerThan90Days || 0"/></div>
-                                <div class="card-title">Inventory Items >90 Days in Stock</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Open OSD Inventory -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('openOSDInventory', 'Open OS&amp;D Inventory in Stock')">
-                                <div class="card-icon"><i class="fa fa-unlock-alt"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.openOSDInventory || 0"/></div>
-                                <div class="card-title">Open OS&amp;D Inventory in Stock</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Displaced Items -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('displacedItems', 'Inventory Items Displaced')">
-                                <div class="card-icon"><i class="fa fa-truck-moving"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.displacedItems || 0"/></div>
-                                <div class="card-title">Inventory Items Displaced</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Dispatched Items -->
-                        <div class="col-md-4 col-lg-3 mb-4">
-                            <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('dispatchedItems', 'Inventory Items Dispatched')">
-                                <div class="card-icon"><i class="fa fa-truck"></i></div>
-                                <div class="card-count"><t t-esc="state.dashboardData.dispatchedItems || 0"/></div>
-                                <div class="card-title">Inventory Items Dispatched</div>
-                            </div>
+                <!-- Dashboard cards - Only show when not loading and no error -->
+                <div t-elif="!state.isLoading and !state.hasError" class="row">
+                    <!-- Waiting For Info -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('waitingForInfo', 'Inventory Items Waiting for Info')">
+                            <div class="card-icon"><i class="fa fa-info-circle"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.waitingForInfo || 0"/></div>
+                            <div class="card-title">Inventory Items Waiting for Info</div>
                         </div>
                     </div>
-                </t>
+                    
+                    <!-- Expected Tomorrow -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('expectedTomorrow', 'Inventory Items Expected Tomorrow')">
+                            <div class="card-icon"><i class="fa fa-hourglass-half"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.expectedTomorrow || 0"/></div>
+                            <div class="card-title">Inventory Items Expected Tomorrow</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expected Today -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('expectedToday', 'Inventory Items Expected Today')">
+                            <div class="card-icon"><i class="fa fa-clock-o"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.expectedToday || 0"/></div>
+                            <div class="card-title">Inventory Items Expected Today</div>
+                        </div>
+                    </div>
+                    
+                    <!-- To Be Put In Stock -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('toBePutInStock', 'Items to be Put in Stock')">
+                            <div class="card-icon"><i class="fa fa-cart-plus"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.toBePutInStock || 0"/></div>
+                            <div class="card-title">Items to be Put in Stock</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Without Allocated Storage -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('withoutAllocatedStorage', 'Inventory Items without Allocated Storage')">
+                            <div class="card-icon"><i class="fa fa-ban"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.withoutAllocatedStorage || 0"/></div>
+                            <div class="card-title">Inventory Items without Allocated Storage</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Labels To Be Printed -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('labelsToBePrinted', 'Labels to be Printed')">
+                            <div class="card-icon"><i class="fa fa-print"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.labelsToBePrinted || 0"/></div>
+                            <div class="card-title">Labels to be Printed</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Longer Than 90 Days -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('longerThan90Days', 'Inventory Items >90 Days in Stock')">
+                            <div class="card-icon"><i class="fa fa-clock"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.longerThan90Days || 0"/></div>
+                            <div class="card-title">Inventory Items >90 Days in Stock</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Open OSD Inventory -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('openOSDInventory', 'Open OS&amp;D Inventory in Stock')">
+                            <div class="card-icon"><i class="fa fa-unlock-alt"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.openOSDInventory || 0"/></div>
+                            <div class="card-title">Open OS&amp;D Inventory in Stock</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Displaced Items -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('displacedItems', 'Inventory Items Displaced')">
+                            <div class="card-icon"><i class="fa fa-truck-moving"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.displacedItems || 0"/></div>
+                            <div class="card-title">Inventory Items Displaced</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dispatched Items -->
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="warehouse-card red-card" t-on-click="() => this.showDetailView('dispatchedItems', 'Inventory Items Dispatched')">
+                            <div class="card-icon"><i class="fa fa-truck"></i></div>
+                            <div class="card-count"><t t-esc="state.dashboardData.dispatchedItems || 0"/></div>
+                            <div class="card-title">Inventory Items Dispatched</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Detail Modal -->
@@ -186,12 +184,12 @@
                             </div>
                             
                             <!-- Empty state -->
-                            <div t-if="!state.isDetailLoading and state.detailData.length === 0" class="alert alert-info" role="alert">
+                            <div t-elif="!state.isDetailLoading and state.detailData.length === 0" class="alert alert-info" role="alert">
                                 <i class="fa fa-info-circle mr-2"></i> No items found for this category.
                             </div>
                             
                             <!-- Detail table -->
-                            <div t-if="!state.isDetailLoading and state.detailData.length > 0" class="table-responsive">
+                            <div t-elif="!state.isDetailLoading and state.detailData.length > 0" class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
@@ -230,7 +228,7 @@
         static template = TEMPLATE;
 
         setup() {
-            // Initialize state
+            // Initialize state - START WITH LOADING FALSE
             this.state = useState({
                 filters: {
                     client: '',
@@ -239,7 +237,7 @@
                 },
                 detailViewCard: null,
                 detailViewTitle: '',
-                isLoading: true,
+                isLoading: false,  // Changed to false initially
                 hasError: false,
                 errorMessage: '',
                 dashboardData: {},
@@ -389,6 +387,10 @@
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 if (data.error) {
                     throw new Error(data.error.message || 'RPC Error');
@@ -396,12 +398,18 @@
                 
                 console.log('Dashboard data received:', data.result);
                 this.state.dashboardData = data.result || {};
+                
+                // Force a small delay to ensure state update is processed
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
                 this.state.hasError = true;
                 this.state.errorMessage = 'Failed to load dashboard data. Please try again later.';
             } finally {
+                // Ensure loading is always set to false
                 this.state.isLoading = false;
+                console.log('Loading state set to false, dashboardData:', this.state.dashboardData);
             }
         }
         
