@@ -30,7 +30,7 @@
         # ],
         'web.assets_frontend': [
             'web/static/lib/owl/owl.js',
-            'warehousing_system/static/src/xml/customer_dashboard_template.xml',
+            # 'warehousing_system/static/src/xml/customer_dashboard_template.xml',
             'warehousing_system/static/src/css/customer_dashboard.css',
             'warehousing_system/static/src/js/customer_dashboard.js',
         ],

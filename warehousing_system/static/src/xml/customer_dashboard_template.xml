@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Make sure your customer_dashboard_template.xml file looks like this -->
+<!-- Path: warehousing_system/static/src/xml/customer_dashboard_template.xml -->
+
 <templates xml:space="preserve">
     <t t-name="warehousing_system.PublicWarehouseDashboardTemplate" owl="1">
         <div>
