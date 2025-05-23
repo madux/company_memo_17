@@ -68,7 +68,7 @@
 
             document.querySelectorAll('.warehouse-card').forEach(card => {
                 card.addEventListener('click', () => {
-                    this.showDetailView(
+                    this.onCardClick(
                         card.dataset.category,
                         card.dataset.title
                     );
@@ -179,29 +179,16 @@
             this.elements.modalTable.style.display='';
         }
 
-        async showDetailView(cardId, title) {
-            if (this.elements.detailModalLabel)
-                this.elements.detailModalLabel.textContent = title;
-            this.updateModalLoadingState(true);
-            this.detailModal?.show();
-            try {
-                const res = await fetch('/warehouse/public/dashboard/action', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        jsonrpc:'2.0', method:'call',
-                        params: {...this.state.filters, cardSelected: cardId, title},
-                        id: Math.random()*1e6|0
-                    })
-                });
-                const payload = await res.json();
-                if (payload.error) throw new Error(payload.error.message);
-                this.updateModalContent(Array.isArray(payload.result)? payload.result : []);
-            } catch(err) {
-                console.error(err);
-                this.updateModalContent([]);
-            } finally {
-                this.updateModalLoadingState(false);
-            }
+        async onCardClick(cardId, title) {
+            const { client, month, year } = this.state.filters;
+            const params = new URLSearchParams({
+                cardSelected: cardId,
+                title: title,
+                client,
+                month,
+                year
+            });
+            window.location.href = `/warehouse/public/dashboard/list?${params.toString()}`;
         }
 
         debounce(fn, wait) {
