@@ -8,62 +8,9 @@
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
                 <!-- Custom CSS for the dashboard -->
-                <style>
-                    .warehouse-card {
-                        background: white;
-                        border-radius: 8px;
-                        padding: 20px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        text-align: center;
-                        cursor: pointer;
-                        transition: transform 0.2s, box-shadow 0.2s;
-                        height: 140px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                    }
-                    
-                    .warehouse-card:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-                    }
-                    
-                    .red-card {
-                        border-left: 4px solid #dc3545;
-                    }
-                    
-                    .card-icon {
-                        font-size: 24px;
-                        color: #dc3545;
-                        margin-bottom: 10px;
-                    }
-                    
-                    .card-count {
-                        font-size: 28px;
-                        font-weight: bold;
-                        margin-bottom: 8px;
-                        color: #333;
-                    }
-                    
-                    .card-title {
-                        font-size: 12px;
-                        color: #666;
-                        line-height: 1.2;
-                    }
-                    
-                    .dashboard-filters {
-                        background: white;
-                        padding: 20px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }
-                    
-                    #public-warehouse-dashboard {
-                        min-height: 400px;
-                    }
-                </style>
+                <link rel="stylesheet" type="text/css" href="/warehousing_system/static/src/css/warehouse_dashboard.css"/>
             </t>
-          
+         
             <div class="container-fluid mt-4">
               <h1 class="text-center mb-4">Warehouse Inventory Dashboard</h1>
               <div id="public-warehouse-dashboard" class="mb-5">
@@ -75,8 +22,13 @@
                 </div>
               </div>
             </div>
-          
-            <!-- Load JS after the DOM is ready -->
+         
+            <!-- Load JavaScript assets -->
+            <t t-call-assets="web.assets_frontend" t-css="false"/>
+            
+            <!-- Load dashboard JavaScript -->
+            <script type="text/javascript" src="/warehousing_system/static/src/js/warehouse_dashboard.js"></script>
+            
             <script type="text/javascript">
                 // Ensure templates are loaded before JS
                 document.addEventListener('DOMContentLoaded', function() {
@@ -88,9 +40,6 @@
                     }, 100);
                 });
             </script>
-            
-            <!-- Load JavaScript assets -->
-            <t t-call-assets="web.assets_frontend" t-css="false"/>
           </t>
         </template>
     </data>

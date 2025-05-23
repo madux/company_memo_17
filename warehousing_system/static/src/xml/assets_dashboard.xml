@@ -1,0 +1,13 @@
+<odoo>
+  <template id="assets_warehouse_dashboard" name="Warehouse Dashboard Assets">
+    <!-- only your dashboard CSS & ES6 module JS -->
+    <link
+      rel="stylesheet"
+      href="/warehousing_system/static/src/css/customer_dashboard.css"
+    />
+    <script
+      type="module"
+      src="/warehousing_system/static/src/js/customer_dashboard.js"
+    ></script>
+  </template>
+</odoo>

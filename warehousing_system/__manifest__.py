@@ -17,7 +17,9 @@
         'views/inventory_views.xml',
         'views/warehouse_dashboard_menu.xml',
         'report/waybill_item_report.xml',
-        'views/customer_dashboard_views.xml'
+        # 'views/customer_dashboard_views.xml',
+        'static/src/xml/assets_dashboard.xml',
+        'static/src/xml/customer_dashboard_template.xml',
     ],
     'assets': {
         'web.assets_backend': [
@@ -25,15 +27,11 @@
             'warehousing_system/static/src/js/warehouse_dashboard.js',
             'warehousing_system/static/src/css/warehouse_dashboard_style.css',
         ],
-        #     'web.assets_qweb': [
-        #     'warehousing_system/static/src/xml/customer_dashboard_template.xml',
+        # 'web.assets_frontend': [
+        #     # 'warehousing_system/static/src/xml/customer_dashboard_template.xml',
+        #     'warehousing_system/static/src/css/customer_dashboard.css',
+        #     # 'warehousing_system/static/src/js/customer_dashboard.js',
         # ],
-        'web.assets_frontend': [
-            # 'web/static/lib/owl/owl.js',
-            # 'warehousing_system/static/src/xml/customer_dashboard_template.xml',
-            'warehousing_system/static/src/css/customer_dashboard.css',
-            'warehousing_system/static/src/js/customer_dashboard.js',
-        ],
     },
     'installable': True,
     'auto_install': False,
