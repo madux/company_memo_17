@@ -17,171 +17,178 @@
                 <div class="warehouse-dashboard container-fluid px-4">
                     <h1 class="text-center mb-4">Warehouse Inventory Dashboard</h1>
 
-                    <!-- Dashboard Content -->
-                    
                     <!-- Filters -->
                     <div class="dashboard-filters mb-4">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label>Client</label>
-                                    <input type="text" class="form-control" id="client-filter"
-                                            placeholder="Search by client name"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label>Month</label>
-                                    <select class="form-control" id="month-filter">
-                                        <option value="All">All</option>
-                                        <option value="Jan">Jan</option>
-                                        <option value="Feb">Feb</option>
-                                        <option value="Mar">Mar</option>
-                                        <option value="Apr">Apr</option>
-                                        <option value="May">May</option>
-                                        <option value="Jun">Jun</option>
-                                        <option value="Jul">Jul</option>
-                                        <option value="Aug">Aug</option>
-                                        <option value="Sep">Sep</option>
-                                        <option value="Oct">Oct</option>
-                                        <option value="Nov">Nov</option>
-                                        <option value="Dec">Dec</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label>Year</label>
-                                    <select class="form-control" id="year-filter">
-                                        <option value="All">All</option>
-                                        <option value="2025">2025</option>
-                                        <option value="2024">2024</option>
-                                        <option value="2023">2023</option>
-                                    </select>
-                                </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label>Client</label>
+                                <input type="text" class="form-control" id="client-filter"
+                                       placeholder="Search by client name"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label>Month</label>
+                                <select class="form-control" id="month-filter">
+                                    <option value="All">All</option>
+                                    <option value="Jan">Jan</option>
+                                    <option value="Feb">Feb</option>
+                                    <option value="Mar">Mar</option>
+                                    <option value="Apr">Apr</option>
+                                    <option value="May">May</option>
+                                    <option value="Jun">Jun</option>
+                                    <option value="Jul">Jul</option>
+                                    <option value="Aug">Aug</option>
+                                    <option value="Sep">Sep</option>
+                                    <option value="Oct">Oct</option>
+                                    <option value="Nov">Nov</option>
+                                    <option value="Dec">Dec</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label>Year</label>
+                                <select class="form-control" id="year-filter">
+                                    <option value="All">All</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                </select>
                             </div>
                         </div>
+                    </div>
 
-                        <div id="cards-container" class="dashboard-cards">
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', 'waitingForInfo', 'Inventory Items Waiting for Info')"> -->
+                    <div id="cards-container" class="dashboard-cards">
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', 'waitingForInfo', 'Inventory Items Waiting for Info')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
                                 <div class="card-icon"><i class="fa fa-info-circle"/></div>
                                 <div class="card-count" id="count-waitingForInfo">0</div>
                                 <div class="card-title">Inventory Items Waiting for Info</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', 'expectedTomorrow', 'Inventory Items Expected Tomorrow')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', 'expectedTomorrow', 'Inventory Items Expected Tomorrow')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="expectedTomorrow" data-title="Inventory Items Expected Tomorrow">
                                 <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
                                 <div class="card-count" id="count-expectedTomorrow">0</div>
                                 <div class="card-title">Inventory Items Expected Tomorrow</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', 'expectedToday', 'Inventory Items Expected Today')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today', 'expectedToday', 'Inventory Items Expected Today')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="expectedToday" data-title="Inventory Items Expected Today">
                                 <div class="card-icon"><i class="fa fa-clock-o"/></div>
-                            <div class="card-count" id="count-expectedToday">0</div>
+                                <div class="card-count" id="count-expectedToday">0</div>
                                 <div class="card-title">Inventory Items Expected Today</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', 'toBePutInStock', 'Items to be Put in Stock')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', 'toBePutInStock', 'Items to be Put in Stock')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="toBePutInStock" data-title="Items to be Put in Stock">
                                 <div class="card-icon"><i class="fa fa-cart-plus"/></div>
                                 <div class="card-count" id="count-toBePutInStock">0</div>
                                 <div class="card-title">Items to be Put in Stock</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', 'withoutAllocatedStorage', 'Inventory Items without Allocated Storage')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_without_allocated_storage', 'withoutAllocatedStorage', 'Inventory Items without Allocated Storage')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="withoutAllocatedStorage" data-title="Inventory Items without Allocated Storage">
                                 <div class="card-icon"><i class="fa fa-ban"/></div>
                                 <div class="card-count" id="count-withoutAllocatedStorage">0</div>
                                 <div class="card-title">Inventory Items without Allocated Storage</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', 'labelsToBePrinted', 'Labels to be Printed')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_labels_to_print', 'labelsToBePrinted', 'Labels to be Printed')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="labelsToBePrinted" data-title="Labels to be Printed">
                                 <div class="card-icon"><i class="fa fa-print"/></div>
                                 <div class="card-count" id="count-labelsToBePrinted">0</div>
                                 <div class="card-title">Labels to be Printed</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', 'longerThan90Days', 'Inventory Items >90 Days in Stock')"> -->
-                            <div class="warehouse-card red-card" data-category="longerThan90Days" data-title="Inventory Items >90 Days in Stock">
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', 'longerThan90Days', 'Inventory Items >90 Days in Stock')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="longerThan90Days" data-title="Inventory Items &gt;90 Days in Stock">
                                 <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
                                 <div class="card-count" id="count-longerThan90Days">0</div>
                                 <div class="card-title">Inventory Items &gt;90 Days in Stock</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', 'openOSDInventory', 'Open OS&amp;D Inventory in Stock')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_open_osd_inventory', 'openOSDInventory', 'Open OS&amp;D Inventory in Stock')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="openOSDInventory" data-title="Open OS&amp;D Inventory in Stock">
                                 <div class="card-icon"><i class="fa fa-unlock-alt"/></div>
                                 <div class="card-count" id="count-openOSDInventory">0</div>
                                 <div class="card-title">Open OS&amp;D Inventory in Stock</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', 'displacedItems', 'Inventory Items Displaced')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', 'displacedItems', 'Inventory Items Displaced')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="displacedItems" data-title="Inventory Items Displaced">
                                 <div class="card-icon"><i class="fa fa-truck-moving"/></div>
                                 <div class="card-count" id="count-displacedItems">0</div>
                                 <div class="card-title">Inventory Items Displaced</div>
                             </div>
-                            <!-- </div> -->
+                        </div>
+                        <!-- </div> -->
 
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_today_alt', 'expectedToday', 'Inventory Items Expected Today (Alt)')"> -->
-                            <div class="warehouse-card red-card" data-category="expectedToday" data-title="Inventory Items Expected Today">
-                                <div class="card-icon"><i class="fa fa-cloud"/></div>
-                                <div class="card-count" id="count-expectedToday">0</div>
-                                <div class="card-title">Inventory Items Expected Today</div>
-                            </div>
-                            <!-- </div> -->
-
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow_alt', 'expectedTomorrow', 'Inventory Items Expected Tomorrow (Alt)')"> -->
-                            <div class="warehouse-card red-card" data-category="expectedTomorrow" data-title="Inventory Items Expected Tomorrow">
-                                <div class="card-icon"><i class="fa fa-cloud"/></div>
-                                <div class="card-count" id="count-expectedTomorrow">0</div>
-                                <div class="card-title">Inventory Items Expected Tomorrow</div>
-                            </div>
-                            <!-- </div> -->
-                            
-                            <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', 'dispatchedItems', 'Inventory Items Dispatched')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', 'dispatchedItems', 'Inventory Items Dispatched')"> -->
+                        <div class="col-card">
                             <div class="warehouse-card red-card" data-category="dispatchedItems" data-title="Inventory Items Dispatched">
                                 <div class="card-icon"><i class="fa fa-truck"/></div>
                                 <div class="card-count" id="count-dispatchedItems">0</div>
                                 <div class="card-title">Inventory Items Dispatched</div>
                             </div>
-                            <!-- </div> -->
                         </div>
+                        <!-- </div> -->
+                    </div>
 
-                        <!-- Detail Modal -->
-                        <div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-labelledby="detailModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-lg" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="detailModalLabel">Details</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div id="modal-loading" class="text-center py-4" style="display:none;">
-                                            <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>
-                                            <p class="mt-2">Loading details...</p>
-                                        </div>
-                                        <div id="modal-empty" class="alert alert-info" role="alert" style="display:none;"><i class="fa fa-info-circle mr-2"></i> No items found for this category.</div>
-                                        <div id="modal-table" class="table-responsive" style="display:none;"><table class="table table-striped"><thead><tr><th>Reference</th><th>Client</th><th>Status</th><th>Scheduled Date</th></tr></thead><tbody id="detail-table-body"/></table></div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                    </div>
+                    <!-- Detail Modal -->
+                    <div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-labelledby="detailModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="detailModalLabel">Details</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
                                 </div>
+                                <div class="modal-body">
+                                    <!-- Loading state -->
+                                    <div id="modal-loading" class="text-center py-4" style="display: none;">
+                                        <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>
+                                        <p class="mt-2">Loading details...</p>
+                                    </div>
+
+                                    <!-- Empty state -->
+                                    <div id="modal-empty" class="alert alert-info" role="alert" style="display: none;"><i class="fa fa-info-circle mr-2"></i> No items found for this category.</div>
+
+                                    <!-- Detail table -->
+                                    <div id="modal-table" class="table-responsive" style="display: none;"><table class="table table-striped"><thead><tr><th>Reference</th><th>Client</th><th>Status</th><th>Scheduled Date</th></tr></thead><tbody id="detail-table-body"/></table></div>
+                                </div>
+                                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div>
                             </div>
                         </div>
                     </div>
-                <script
-                type="module"
-                src="/warehousing_system/static/src/js/customer_dashboard.js"
-                ></script>
+
+                    <!-- Dashboard script -->
+                    <script
+                    type="module"
+                    src="/warehousing_system/static/src/js/customer_dashboard.js"
+                    ></script>
+                </div>
             </t>
         </template>
     </data>
