@@ -56,22 +56,12 @@
                     </div>
 
                     <div id="cards-container" class="dashboard-cards">
-                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', 'waitingForInfo', 'Inventory Items Waiting for Info')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', 'toBePutInStock', 'Items to be Put in Stock')"> -->
                         <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
-                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
-                                <div class="card-count" id="count-waitingForInfo">0</div>
-                                <div class="card-title">Inventory Items Waiting for Info</div>
-                            </div>
-                        </div>
-                        <!-- </div> -->
-
-                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', 'expectedTomorrow', 'Inventory Items Expected Tomorrow')"> -->
-                        <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="expectedTomorrow" data-title="Inventory Items Expected Tomorrow">
-                                <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
-                                <div class="card-count" id="count-expectedTomorrow">0</div>
-                                <div class="card-title">Inventory Items Expected Tomorrow</div>
+                            <div class="warehouse-card red-card" data-category="toBePutInStock" data-title="Items to be Put in Stock">
+                                <div class="card-icon"><i class="fa fa-cart-plus"/></div>
+                                <div class="card-count" id="count-toBePutInStock">0</div>
+                                <div class="card-title">Total Inventory Items in Stock</div>
                             </div>
                         </div>
                         <!-- </div> -->
@@ -86,12 +76,12 @@
                         </div>
                         <!-- </div> -->
 
-                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_to_put_in_stock', 'toBePutInStock', 'Items to be Put in Stock')"> -->
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_expected_tomorrow', 'expectedTomorrow', 'Inventory Items Expected Tomorrow')"> -->
                         <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="toBePutInStock" data-title="Items to be Put in Stock">
-                                <div class="card-icon"><i class="fa fa-cart-plus"/></div>
-                                <div class="card-count" id="count-toBePutInStock">0</div>
-                                <div class="card-title">Items to be Put in Stock</div>
+                            <div class="warehouse-card red-card" data-category="expectedTomorrow" data-title="Inventory Items Expected Tomorrow">
+                                <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
+                                <div class="card-count" id="count-expectedTomorrow">0</div>
+                                <div class="card-title">Inventory Items Expected Tomorrow</div>
                             </div>
                         </div>
                         <!-- </div> -->
@@ -101,7 +91,7 @@
                             <div class="warehouse-card red-card" data-category="withoutAllocatedStorage" data-title="Inventory Items without Allocated Storage">
                                 <div class="card-icon"><i class="fa fa-ban"/></div>
                                 <div class="card-count" id="count-withoutAllocatedStorage">0</div>
-                                <div class="card-title">Inventory Items without Allocated Storage</div>
+                                <div class="card-title">Items Pending Storage Allocation</div>
                             </div>
                         </div>
                         <!-- </div> -->
@@ -116,12 +106,62 @@
                         </div>
                         <!-- </div> -->
 
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', 'dispatchedItems', 'Inventory Items Dispatched')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="dispatchedItems" data-title="Inventory Items Dispatched">
+                                <div class="card-icon"><i class="fa fa-truck"/></div>
+                                <div class="card-count" id="count-dispatchedItems">0</div>
+                                <div class="card-title">Inventory Items to be Dispatched Today</div>
+                            </div>
+                        </div>
+                        <!-- </div> -->
+
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', 'dispatchedItems', 'Inventory Items Dispatched')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="dispatchedItems" data-title="Inventory Items Dispatched">
+                                <div class="card-icon"><i class="fa fa-truck"/></div>
+                                <div class="card-count" id="count-dispatchedItems">0</div>
+                                <div class="card-title">Inventory Items to be Dispatched Tomorrow</div>
+                            </div>
+                        </div>
+                        <!-- </div> -->
+
                         <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_long_term_stock', 'longerThan90Days', 'Inventory Items >90 Days in Stock')"> -->
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="longerThan90Days" data-title="Inventory Items &gt;90 Days in Stock">
                                 <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
                                 <div class="card-count" id="count-longerThan90Days">0</div>
-                                <div class="card-title">Inventory Items &gt;90 Days in Stock</div>
+                                <div class="card-title">Inventory Items longer than 90 Days in Stock</div>
+                            </div>
+                        </div>
+                        <!-- </div> -->
+
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', 'waitingForInfo', 'Inventory Items Waiting for Info')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
+                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
+                                <div class="card-count" id="count-waitingForInfo">0</div>
+                                <div class="card-title">Critical Items in Stock</div>
+                            </div>
+                        </div>
+                        <!-- </div> -->
+
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_waiting_for_info', 'waitingForInfo', 'Inventory Items Waiting for Info')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
+                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
+                                <div class="card-count" id="count-waitingForInfo">0</div>
+                                <div class="card-title">Dangerous Goods</div>
+                            </div>
+                        </div>
+                        <!-- </div> -->
+
+                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', 'displacedItems', 'Inventory Items Displaced')"> -->
+                        <div class="col-card">
+                            <div class="warehouse-card red-card" data-category="displacedItems" data-title="Inventory Items Displaced">
+                                <div class="card-icon"><i class="fa fa-truck-moving"/></div>
+                                <div class="card-count" id="count-displacedItems">0</div>
+                                <div class="card-title">Temperature Sensitive</div>
                             </div>
                         </div>
                         <!-- </div> -->
@@ -136,25 +176,6 @@
                         </div>
                         <!-- </div> -->
 
-                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_displaced_items', 'displacedItems', 'Inventory Items Displaced')"> -->
-                        <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="displacedItems" data-title="Inventory Items Displaced">
-                                <div class="card-icon"><i class="fa fa-truck-moving"/></div>
-                                <div class="card-count" id="count-displacedItems">0</div>
-                                <div class="card-title">Inventory Items Displaced</div>
-                            </div>
-                        </div>
-                        <!-- </div> -->
-
-                        <!-- <div class="col-card" t-on-click="() => this.onCardClick('action_view_dispatched', 'dispatchedItems', 'Inventory Items Dispatched')"> -->
-                        <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="dispatchedItems" data-title="Inventory Items Dispatched">
-                                <div class="card-icon"><i class="fa fa-truck"/></div>
-                                <div class="card-count" id="count-dispatchedItems">0</div>
-                                <div class="card-title">Inventory Items Dispatched</div>
-                            </div>
-                        </div>
-                        <!-- </div> -->
                     </div>
 
                     <!-- Detail Modal -->
