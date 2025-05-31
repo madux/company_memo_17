@@ -1,4 +1,3 @@
-
 .warehouse-dashboard.container-fluid {
   max-width: 1200px;
   margin: auto;
@@ -6,24 +5,28 @@
   height: 100%;
   overflow-y: auto;
 }
+
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow-y: auto;
 }
+
 .dashboard-cards {
   display: flex;
   flex-wrap: wrap;
   margin: -0.75rem;
   padding-bottom: 1.5rem;
 }
+
 .col-card {
   flex: 0 0 288px;
   max-width: 288px;
   padding: 0.75rem;
   box-sizing: border-box;
 }
+
 .warehouse-card {
   background-color: #f8dada;
   border: 1px solid #f1c3c3;
@@ -31,37 +34,50 @@ html, body {
   padding: 1rem;
   height: 130px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Changed from column to row */
+  align-items: center; /* Center items vertically */
   justify-content: space-between;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   position: relative;
+  gap: 1rem; /* Add gap between icon and content sections */
 }
+
 .warehouse-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
+
+/* Icon container - left side */
 .warehouse-card .card-icon {
-  font-size: 1.75rem;
+  font-size: 2.5rem; /* Increased icon size */
   color: #c02c2c;
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  pointer-events: none;
+  flex-shrink: 0; /* Prevent icon from shrinking */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px; /* Fixed width for consistent alignment */
+  height: 60px; /* Fixed height for consistent alignment */
 }
+
+/* Content container - right side */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1; /* Take remaining space */
+  text-align: center;
+}
+
 .warehouse-card .card-count {
-  font-size: 2rem;
+  font-size: 2.5rem; /* Increased count size */
   font-weight: bold;
   color: #c02c2c;
-  text-align: center;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  line-height: 1;
 }
-/* .warehouse-card .card-title {
-  font-size: 0.9rem;
-  color: #9a2222;
-  text-align: center;
-} */
+
 .warehouse-card .card-title {
   font-size: 0.9rem;
   color: #9a2222;
@@ -69,7 +85,8 @@ html, body {
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-  padding: 0 0.5rem;
+  margin-top: 0.5rem;
+  line-height: 1.2;
 }
 
 @media (max-width: 768px) {
@@ -84,9 +101,18 @@ html, body {
     flex: 0 0 100%;
     max-width: 100%;
   }
+  
+  /* Adjust for mobile */
+  .warehouse-card .card-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .warehouse-card .card-count {
+    font-size: 2rem;
+  }
 }
-
-/* Additional */
 
 /* Dashboard Header Styles */
 .dashboard-header {
@@ -179,16 +205,16 @@ html, body {
   .dashboard-header .row {
     text-align: center;
   }
-  
+ 
   .company-section {
     justify-content: center;
     margin-top: 1rem;
   }
-  
+ 
   .brand-title {
     font-size: 2rem;
   }
-  
+ 
   .company-name {
     max-width: none;
     text-align: center;
