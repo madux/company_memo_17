@@ -37,43 +37,50 @@
                             
                             <ul class="sidebar-nav">
                                 <li class="nav-item">
-                                    <a href="/warehouse/dashboard" class="nav-link active">
+                                    <a href="/warehouse/dashboard" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'dashboard' else '')">
                                         <i class="fas fa-tachometer-alt"></i>
                                         Dashboard
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/inventory" class="nav-link">
+                                    <a href="/warehouse/inventory" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'inventory' else '')">
                                         <i class="fas fa-boxes"></i>
                                         Inventory
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/inventory/create" class="nav-link">
+                                    <a href="/warehouse/inventory/create" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'create' else '')">
                                         <i class="fas fa-edit"></i>
                                         Creation Form
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/put-away" class="nav-link">
+                                    <a href="/warehouse/put-away" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'put-away' else '')">
                                         <i class="fas fa-arrow-right"></i>
                                         Put Away to Section
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/inventory/lists" class="nav-link">
+                                    <a href="/warehouse/inventory/lists" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'lists' else '')">
                                         <i class="fas fa-list"></i>
                                         Inventory Lists
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/inbound" class="nav-link">
+                                    <a href="/warehouse/inbound" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'inbound' else '')">
                                         <i class="fas fa-truck-loading"></i>
                                         Inbound Shipments
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="/warehouse/outbound" class="nav-link">
+                                    <a href="/warehouse/outbound" 
+                                        t-att-class="'nav-link' + (' active' if current_page == 'outbound' else '')">
                                         <i class="fas fa-shipping-fast"></i>
                                         Outbound Dispatch Orders
                                     </a>

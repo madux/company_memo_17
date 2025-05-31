@@ -4,39 +4,29 @@
  */
 
 $(document).ready(function() {
-    // Cache DOM elements
     const sidebar = $('#sidebar');
     const mainContent = $('#mainContent');
     const sidebarToggle = $('#sidebarToggle');
     const sidebarOverlay = $('#sidebarOverlay');
 
-    /**
-     * Handle sidebar toggle based on screen size
-     */
+    
     sidebarToggle.on('click', function() {
         if (window.innerWidth <= 768) {
-            // Mobile behavior - show/hide sidebar with overlay
             sidebar.toggleClass('show');
             sidebarOverlay.toggleClass('show');
         } else {
-            // Desktop behavior - collapse/expand sidebar
             sidebar.toggleClass('collapsed');
             mainContent.toggleClass('expanded');
         }
     });
 
-    /**
-     * Close sidebar when clicking overlay (mobile only)
-     */
+    
     sidebarOverlay.on('click', function() {
         sidebar.removeClass('show');
         sidebarOverlay.removeClass('show');
     });
 
-    /**
-     * Handle window resize events
-     * Reset mobile classes when switching to desktop
-     */
+    
     $(window).on('resize', function() {
         if (window.innerWidth > 768) {
             sidebar.removeClass('show');
@@ -44,21 +34,38 @@ $(document).ready(function() {
         }
     });
 
-    /**
-     * Active navigation link highlighting
-     * Automatically highlights the current page in the navigation
-     */
+    
+    // function setActiveNavLink() {
+    //     const currentPath = window.location.pathname;
+        
+    //     $('.nav-link').each(function() {
+    //         const href = $(this).attr('href');
+            
+    //         // Remove active class from all links first
+    //         $(this).removeClass('active');
+            
+    //         // Add active class if current path matches or starts with the link href
+    //         if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+    //             $(this).addClass('active');
+    //         }
+    //     });
+    // }
     function setActiveNavLink() {
         const currentPath = window.location.pathname;
         
+        $('.nav-link').removeClass('active');
+        
+        if (typeof window.current_page !== 'undefined') {
+            return;
+        }
         $('.nav-link').each(function() {
             const href = $(this).attr('href');
             
-            // Remove active class from all links first
-            $(this).removeClass('active');
-            
-            // Add active class if current path matches or starts with the link href
-            if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+            if ((currentPath === '/warehouse' || currentPath === '/warehouse/') && href === '/warehouse/dashboard') {
+                $(this).addClass('active');
+                return;
+            }  
+            if (currentPath === href || (href !== '/warehouse' && href !== '/' && currentPath.startsWith(href))) {
                 $(this).addClass('active');
             }
         });
@@ -67,8 +74,23 @@ $(document).ready(function() {
     // Set active link on page load
     setActiveNavLink();
 
+    //************************ */
+    $('.nav-link').on('click', function(e) {
+        const href = $(this).attr('href');
+        
+        $('.nav-link').removeClass('active');
+        
+        $(this).addClass('active');
+        
+        if (window.innerWidth <= 768) {
+            sidebar.removeClass('show');
+            sidebarOverlay.removeClass('show');
+        }
+    });
+    //*************************** */
+
     /**
-     * Optional: Add smooth scrolling for anchor links
+     * Smooth scrolling for anchor links
      */
     $('a[href^="#"]').on('click', function(e) {
         e.preventDefault();
@@ -82,7 +104,7 @@ $(document).ready(function() {
     });
 
     /**
-     * Optional: Close mobile sidebar when clicking nav links
+     * Close mobile sidebar when clicking nav links
      */
     $('.nav-link').on('click', function() {
         if (window.innerWidth <= 768) {
@@ -92,7 +114,7 @@ $(document).ready(function() {
     });
 
     /**
-     * Optional: Add keyboard navigation support
+     * Keyboard navigation support
      */
     $(document).on('keydown', function(e) {
         // ESC key closes mobile sidebar
@@ -101,4 +123,22 @@ $(document).ready(function() {
             sidebarOverlay.removeClass('show');
         }
     });
+
+    $('.sidebar-brand').on('click', function(e) {
+        e.preventDefault();
+        
+        $('.nav-link').removeClass('active');
+        
+        $('a[href="/warehouse/dashboard"]').addClass('active');
+        window.location.href = '/warehouse/dashboard';
+    });
+
+    function initializePage() {
+        const hasActiveLink = $('.nav-link.active').length > 0;
+        if (!hasActiveLink) {
+            $('a[href="/warehouse/dashboard"]').addClass('active');
+        }
+    }
+
+    initializePage();
 });

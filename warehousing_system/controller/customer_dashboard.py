@@ -87,3 +87,160 @@ class PublicWarehouseDashboardController(http.Controller):
                 'filters': action_data['filterData']
             }
         )
+
+
+########################### I will combine the methods below to the customer_inventory_list above
+
+    @http.route(
+        '/warehouse/inventory',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def warehuse_inventory(self, client=None, month='All', year='All', **kw):
+        """
+        Display all inventory items (stock.picking records)
+        """
+        filters = {
+            'client': client or '',
+            'month': month or 'All',
+            'year': year or 'All',
+        }
+        
+        # Get all inventory records using the same base domain logic
+        domain = request.env['stock.picking'].sudo().get_base_domain(filters) or []
+        records = request.env['stock.picking'].sudo().search(domain)
+        
+        # Format records for display
+        formatted_records = []
+        for record in records:
+            formatted_records.append({
+                'id': record.id,
+                'name': record.name,
+                'client': record.customer_id.name if record.customer_id else '',
+                'status': record.inventory_status,
+                'scheduled_date': record.scheduled_date.strftime('%Y-%m-%d') if record.scheduled_date else '',
+            })
+        
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': formatted_records,
+                'title': 'All Inventory Items',
+                'filters': filters,
+                'current_page': 'inventory'
+            }
+        )
+
+    @http.route(
+        '/warehouse/outbound',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def outbound_dispatch_orders(self, client=None, month='All', year='All', **kw):
+        """
+        Display outbound dispatch orders using the same API as card clicks
+        """
+        action_data = {
+            'cardSelected': 'dispatchedItems',
+            'title': 'Outbound Dispatch Orders',
+            'filterData': {
+                'client': client or '',
+                'month': month or 'All',
+                'year': year or 'All',
+            }
+        }
+        
+        records = request.env['stock.picking'].sudo().get_customer_dashboard_detail(action_data)
+        
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': records,
+                'title': 'Outbound Dispatch Orders',
+                'filters': action_data['filterData'],
+                'current_page': 'outbound'
+            }
+        )
+
+    @http.route(
+        '/warehouse/inventory/create',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def inventory_create_form(self, **kw):
+        """
+        Placeholder for inventory creation form
+        """
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': [],
+                'title': 'Inventory Creation Form',
+                'filters': {},
+                'current_page': 'create',
+                'is_form': True
+            }
+        )
+
+    @http.route(
+        '/warehouse/put-away',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def put_away_section(self, **kw):
+        """
+        Placeholder for put away to section
+        """
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': [],
+                'title': 'Put Away to Section',
+                'filters': {},
+                'current_page': 'put-away'
+            }
+        )
+
+    @http.route(
+        '/warehouse/inventory/lists',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def inventory_lists(self, **kw):
+        """
+        Placeholder for inventory lists
+        """
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': [],
+                'title': 'Inventory Lists',
+                'filters': {},
+                'current_page': 'lists'
+            }
+        )
+
+    @http.route(
+        '/warehouse/inbound',
+        type='http',
+        auth='public',
+        website=True,
+    )
+    def inbound_shipments(self, **kw):
+        """
+        Placeholder for inbound shipments
+        """
+        return request.render(
+            'warehousing_system.public_warehouse_detail_template',
+            {
+                'records': [],
+                'title': 'Inbound Shipments',
+                'filters': {},
+                'current_page': 'inbound'
+            }
+        )
