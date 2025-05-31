@@ -5,11 +5,11 @@
         <div class="container-fluid mt-4">
           <h2 class="mb-3">
             <t t-esc="title"/>
-            <small class="text-muted">
+            <!-- <small class="text-muted">
               (<t t-esc="filters.get('client') or 'All clients'"/>,
                <t t-esc="filters.get('month', 'All')"/>,
                <t t-esc="filters.get('year', 'All')"/>)
-            </small>
+            </small> -->
           </h2>
           <a class="btn btn-secondary mb-3" t-att-href="'/warehouse/public/dashboard'">
             ← Back to Dashboard
