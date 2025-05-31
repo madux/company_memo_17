@@ -142,25 +142,25 @@ class WarehouseDashboard extends Component {
 
 WarehouseDashboard.template = 'warehousing_system.WarehouseDashboard';
 
-WarehouseDashboard.props = {
-    action: { type: Object, optional: true },
-    actionId: { type: Number, optional: true },
-    className: { type: String, optional: true },
-    globalState: { type: Object, optional: true },
-    breadcrumbs: { type: Array, optional: true },
-    config: { type: Object, optional: true },
-    context: { type: Object, optional: true },
-    domain: { type: Array, optional: true },
-    resId: { type: Number, optional: true },
-    resIds: { type: Array, optional: true },
-    resModel: { type: String, optional: true },
-    searchModel: { type: Object, optional: true },
-    state: { type: Object, optional: true },
-    viewId: { type: Number, optional: true },
-    views: { type: Array, optional: true },
-    withBreadcrumbs: { type: Boolean, optional: true },
-    withSearchBar: { type: Boolean, optional: true },
-};
+// WarehouseDashboard.props = {
+//     action: { type: Object, optional: true },
+//     actionId: { type: Number, optional: true },
+//     className: { type: String, optional: true },
+//     globalState: { type: Object, optional: true },
+//     breadcrumbs: { type: Array, optional: true },
+//     config: { type: Object, optional: true },
+//     context: { type: Object, optional: true },
+//     domain: { type: Array, optional: true },
+//     resId: { type: Number, optional: true },
+//     resIds: { type: Array, optional: true },
+//     resModel: { type: String, optional: true },
+//     searchModel: { type: Object, optional: true },
+//     state: { type: Object, optional: true },
+//     viewId: { type: Number, optional: true },
+//     views: { type: Array, optional: true },
+//     withBreadcrumbs: { type: Boolean, optional: true },
+//     withSearchBar: { type: Boolean, optional: true },
+// };
 
 registry.category("actions").add("warehouse_inventory_dashboard", WarehouseDashboard);
 
