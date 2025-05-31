@@ -3,15 +3,18 @@ from odoo.http import request, Response
 import json
 
 class PublicWarehouseDashboardController(http.Controller):
-    @http.route(
-        '/warehouse/public/dashboard',
-        type='http',
-        auth='public',
-        website=True,
-    )
+    
+    @http.route([
+        '/warehouse', 
+        '/warehouse/', 
+        '/warehouse/dashboard',
+        '/warehouse/public/dashboard'
+    ], type='http', auth='public', website=True)
     def render_public_dashboard(self, **kw):
         """Renders the public warehouse dashboard template"""
-        return request.render('warehousing_system.public_warehouse_dashboard_template', {})
+        return request.render('warehousing_system.public_warehouse_dashboard_template', {
+            'current_page': 'dashboard'
+        })
     
     @http.route(
         '/warehouse/public/dashboard/data',
@@ -84,12 +87,10 @@ class PublicWarehouseDashboardController(http.Controller):
             {
                 'records': records,
                 'title': title,
-                'filters': action_data['filterData']
+                'filters': action_data['filterData'],
+                'current_page': 'dashboard'
             }
         )
-
-
-########################### I will combine the methods below to the customer_inventory_list above
 
     @http.route(
         '/warehouse/inventory',
@@ -97,7 +98,7 @@ class PublicWarehouseDashboardController(http.Controller):
         auth='public',
         website=True,
     )
-    def warehuse_inventory(self, client=None, month='All', year='All', **kw):
+    def warehouse_inventory(self, client=None, month='All', year='All', **kw):
         """
         Display all inventory items (stock.picking records)
         """
@@ -107,11 +108,9 @@ class PublicWarehouseDashboardController(http.Controller):
             'year': year or 'All',
         }
         
-        # Get all inventory records using the same base domain logic
         domain = request.env['stock.picking'].sudo().get_base_domain(filters) or []
         records = request.env['stock.picking'].sudo().search(domain)
         
-        # Format records for display
         formatted_records = []
         for record in records:
             formatted_records.append({
