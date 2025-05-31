@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-// Public Warehouse Dashboard JavaScript
+// Customer Warehouse Dashboard JavaScript
 (function() {
     'use strict';
 

@@ -1,13 +1,10 @@
 <odoo>
     <data>
-        <!-- Main page template -->
         <template id="public_warehouse_dashboard_template" name="Public Warehouse Dashboard Page">
           <t t-call="website.layout">
             <t t-set="head">
-                <!-- Load CSS and templates first -->
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
-                <!-- Custom CSS for the dashboard -->
                 <link rel="stylesheet" type="text/css" href="/warehousing_system/static/src/css/warehouse_dashboard.css"/>
             </t>
          
@@ -23,10 +20,8 @@
               </div>
             </div>
          
-            <!-- Load JavaScript assets -->
             <t t-call-assets="web.assets_frontend" t-css="false"/>
             
-            <!-- Load dashboard JavaScript -->
             <script type="text/javascript" src="/warehousing_system/static/src/js/warehouse_dashboard.js"></script>
             
             <script type="text/javascript">
