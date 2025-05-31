@@ -1,0 +1,128 @@
+<odoo>
+    <data>
+        <template id="warehouse_layout" name="Warehouse Management System Layout">
+            <html>
+                <head>
+                    <meta charset="utf-8"/>
+                    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+                    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                    <meta name="generator" content="Odoo"/>
+
+                    <t t-out="head or ''"/>
+
+                    <title t-esc="title or 'Warehouse Management System'"/>
+                    <meta name="description" t-att-content="description or 'Warehouse Management System Dashboard'"/>
+                    <meta name="keywords" t-att-content="keywords or 'warehouse, management, inventory, logistics'"/>
+
+                    <!-- Bootstrap 4 -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css"/>
+                    <!-- Font Awesome -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
+                    <!-- Custom Warehouse Layout CSS -->
+                    <link rel="stylesheet" href="/warehousing_system/static/src/css/warehouse_layout.css"/>
+                </head>
+
+                <body>
+                    <div class="warehouse-layout">
+                        <!-- Sidebar Overlay for Mobile -->
+                        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+                        <!-- Sidebar -->
+                        <nav class="sidebar" id="sidebar">
+                            <div class="sidebar-header">
+                                <a href="/warehouse" class="sidebar-brand">
+                                    <span class="brand-red">RED</span><span style="color: white;">WAREHOUSE</span>
+                                </a>
+                            </div>
+                            
+                            <ul class="sidebar-nav">
+                                <li class="nav-item">
+                                    <a href="/warehouse/dashboard" class="nav-link active">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                        Dashboard
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/inventory" class="nav-link">
+                                        <i class="fas fa-boxes"></i>
+                                        Inventory
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/inventory/create" class="nav-link">
+                                        <i class="fas fa-edit"></i>
+                                        Creation Form
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/put-away" class="nav-link">
+                                        <i class="fas fa-arrow-right"></i>
+                                        Put Away to Section
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/inventory/lists" class="nav-link">
+                                        <i class="fas fa-list"></i>
+                                        Inventory Lists
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/inbound" class="nav-link">
+                                        <i class="fas fa-truck-loading"></i>
+                                        Inbound Shipments
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="/warehouse/outbound" class="nav-link">
+                                        <i class="fas fa-shipping-fast"></i>
+                                        Outbound Dispatch Orders
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+
+                        <!-- Main Content -->
+                        <div class="main-content" id="mainContent">
+                            <!-- Header -->
+                            <header class="main-header">
+                                <div class="header-left">
+                                    <button class="sidebar-toggle" id="sidebarToggle">
+                                        <i class="fas fa-bars"></i>
+                                    </button>
+                                    <div class="header-brand">
+                                        <h1 class="brand-title">
+                                            <span class="brand-red">RED</span><span class="brand-black">it</span>
+                                            <span class="brand-subtitle">- WMS</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <div class="header-company">
+                                    <span class="company-name">Yinson Operations &amp; Production West Africa Ltd.</span>
+                                    <div class="logo-placeholder">
+                                        <img src="/warehousing_system/static/src/img/company-logo.png" 
+                                             alt="Company Logo" 
+                                             class="company-logo"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"/>
+                                        <div class="logo-fallback" style="display: none;">LOGO</div>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <!-- Content Wrapper -->
+                            <div class="content-wrapper">
+                                <div class="content-area">
+                                    <t t-out="0"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scripts -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
+                    <script src="/warehousing_system/static/src/js/warehouse_layout.js"></script>
+                </body>
+            </html>
+        </template>
+    </data>
+</odoo>

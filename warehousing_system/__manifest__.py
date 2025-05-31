@@ -19,6 +19,7 @@
         'report/waybill_item_report.xml',
         # 'views/customer_dashboard_views.xml',
         'static/src/xml/assets_dashboard.xml',
+        'static/src/xml/warehouse_layout.xml',
         'static/src/xml/customer_dashboard_template.xml',
         'static/src/xml/customer_inventory_view.xml'
     ],

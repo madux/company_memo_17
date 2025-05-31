@@ -30,7 +30,6 @@ class PublicWarehouseDashboardController(http.Controller):
             'month': month or 'All',
             'year': year or 'All',
         }
-        # Use our public-safe model method
         data = request.env['stock.picking'].sudo().get_customer_warehouse_dashboard_data(filters)
         return data
     

@@ -1,7 +1,7 @@
 <odoo>
     <data>
         <template id="public_warehouse_dashboard_template" name="Public Warehouse Dashboard Page">
-            <t t-call="website.layout">
+            <t t-call="warehousing_system.warehouse_layout">
                 <!-- Include only our dashboard assets -->
                 <!-- <t t-set="head">
                     <t t-call-assets="warehousing_system.assets_warehouse_dashboard"/>
@@ -15,7 +15,7 @@
 
                 <div class="warehouse-dashboard container-fluid px-4">
                     <!-- Header Section with Branding -->
-                    <div class="dashboard-header mb-4">
+                    <!-- <div class="dashboard-header mb-4">
                         <div class="row align-items-center">
                             <div class="col-md-6">
                                 <div class="brand-section">
@@ -30,7 +30,7 @@
                                     <div class="company-info">
                                         <span class="company-name">Yinson Operations &amp; Production West Africa Ltd.</span>
                                         <div class="logo-placeholder">
-                                            <!-- Logo placeholder - replace with actual logo -->
+                                            
                                             <img src="/warehousing_system/static/src/img/company-logo.png" 
                                                  alt="Company Logo" 
                                                  class="company-logo"
@@ -41,7 +41,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Filters -->
                     <div class="dashboard-filters mb-4">
