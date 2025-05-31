@@ -46,7 +46,8 @@
             // map counts
             ['waitingForInfo','expectedTomorrow','expectedToday','toBePutInStock',
              'withoutAllocatedStorage','labelsToBePrinted','longerThan90Days',
-             'openOSDInventory','displacedItems','dispatchedItems'
+             'openOSDInventory','displacedItems','dispatchedItems', 'criticalStockItems',
+             'dangerousGoods', 'temperatureSensitive'
             ].forEach(cat => {
                 this.elements[`count-${cat}`] = document.getElementById(`count-${cat}`);
             });
@@ -92,7 +93,6 @@
             if (this.elements.loadingState) {
                 this.elements.loadingState.style.display = isLoading ? '' : 'none';
             }
-            // instead of setting block/flex, just hide: when not loading, clear any inline;
             if (this.elements.cardsContainer) {
                 if (isLoading) {
                     this.elements.cardsContainer.style.display = 'none';

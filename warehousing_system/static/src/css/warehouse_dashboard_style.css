@@ -5,70 +5,89 @@
   height: 100%;
   overflow-y: auto;
 }
+
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow-y: auto;
 }
+
 .dashboard-cards {
   display: flex;
   flex-wrap: wrap;
-  margin: -0.75rem;
-  padding-bottom: 1.5rem;
+  margin: -0.5rem; /* Reduced margin */
+  padding-bottom: 2rem; /* More space at bottom */
 }
+
 .col-card {
-  flex: 0 0 288px;
-  max-width: 288px;
-  padding: 0.75rem;
+  flex: 0 0 260px; /* Reduced width */
+  max-width: 260px;
+  padding: 0.5rem; /* Reduced padding */
   box-sizing: border-box;
 }
+
 .warehouse-card {
-  background-color: #f8dada;
-  border: 1px solid #f1c3c3;
-  border-radius: 8px;
-  padding: 1rem;
-  height: 130px;
+  background-color: #f4c2c2; /* Darker pink/red color */
+  border: 1px solid #e8a5a5; /* Darker border */
+  border-radius: 6px; /* Slightly smaller radius */
+  padding: 0.75rem; /* Reduced padding */
+  height: 90px; /* Much smaller height - flatter */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   justify-content: space-between;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   position: relative;
+  gap: 0.75rem; /* Reduced gap */
 }
+
 .warehouse-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
+
+/* Icon container - left side */
 .warehouse-card .card-icon {
-  font-size: 1.75rem;
-  color: #c02c2c;
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  pointer-events: none;
+  font-size: 1.8rem; /* Smaller icon size */
+  color: #b91c1c; /* Darker red color */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; /* Smaller fixed width */
+  height: 40px; /* Smaller fixed height */
 }
+
+/* Content container - right side */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  text-align: center;
+}
+
 .warehouse-card .card-count {
-  font-size: 2rem;
+  font-size: 1.8rem; /* Smaller count size */
   font-weight: bold;
-  color: #c02c2c;
-  text-align: center;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  color: #b91c1c; /* Darker red color */
+  margin: 0;
+  line-height: 1;
 }
-/* .warehouse-card .card-title {
-  font-size: 0.9rem;
-  color: #9a2222;
-  text-align: center;
-} */
+
 .warehouse-card .card-title {
-  font-size: 0.9rem;
-  color: #9a2222;
+  font-size: 0.75rem; /* Smaller title font */
+  color: #7f1d1d; /* Even darker red for title */
   text-align: center;
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-  padding: 0 0.5rem;
+  margin-top: 0.25rem; /* Reduced margin */
+  line-height: 1.1;
+  font-weight: 500; /* Slightly bolder */
 }
 
 @media (max-width: 768px) {
@@ -82,5 +101,127 @@ html, body {
   .col-card {
     flex: 0 0 100%;
     max-width: 100%;
+  }
+  
+  /* Adjust for mobile */
+  .warehouse-card .card-icon {
+    font-size: 1.5rem;
+    width: 35px;
+    height: 35px;
+  }
+  
+  .warehouse-card .card-count {
+    font-size: 1.5rem;
+  }
+  
+  .warehouse-card {
+    height: 80px; /* Even smaller on mobile */
+  }
+}
+
+/* Dashboard Header Styles */
+.dashboard-header {
+  background-color: #ffffff;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 2rem;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.brand-red {
+  color: #dc3545;
+}
+
+.brand-black {
+  color: #000000;
+}
+
+.brand-subtitle {
+  color: #dc3545;
+  font-weight: normal;
+  margin-left: 0.5rem;
+}
+
+.company-section {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+.company-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.company-name {
+  font-size: 1rem;
+  color: #333333;
+  font-weight: 500;
+  max-width: 250px;
+  text-align: right;
+  line-height: 1.2;
+}
+
+.logo-placeholder {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.company-logo {
+  max-width: 60px;
+  max-height: 60px;
+  object-fit: contain;
+}
+
+.logo-fallback {
+  display: none;
+  width: 60px;
+  height: 60px;
+  background-color: #f8f9fa;
+  border: 2px dashed #dc3545;
+  color: #dc3545;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-header .row {
+    text-align: center;
+  }
+ 
+  .company-section {
+    justify-content: center;
+    margin-top: 1rem;
+  }
+ 
+  .brand-title {
+    font-size: 2rem;
+  }
+ 
+  .company-name {
+    max-width: none;
+    text-align: center;
   }
 }

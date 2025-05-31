@@ -289,6 +289,24 @@ class WarehouseInventory(models.Model):
             ('inventory_status', '=', 'done'),
             ('financial_id', '!=', False)
         ]
+        
+    def critical_stock_items_domain(self):
+        return [
+            ('critical_equipment', '!=', 'none'),
+            ('financial_id', '!=', False)
+        ]
+        
+    def temperature_sensitive_domain(self):
+        return [
+            ('critical_equipment', '!=', 'none'),
+            ('financial_id', '!=', False)
+        ]
+        
+    def dangerous_goods_domain(self):
+        return [
+            ('critical_equipment', '=', 'hazard'),
+            ('financial_id', '!=', False)
+        ]
     
     @api.model
     def get_warehouse_dashboard_data(self, filters=None):
@@ -427,6 +445,10 @@ class WarehouseInventory(models.Model):
         displaced_items = self.search_count(base_domain + self.displaced_items_domain())
         dispatched_items = self.search_count(base_domain + self.dispatched_items_domain())
         
+        critical_stock_items = self.search_count(base_domain + self.critical_stock_items_domain())
+        temperature_sensitive = self.search_count(base_domain + self.temperature_sensitive_domain())
+        dangerous_goods = self.search_count(base_domain + self.dangerous_goods_domain())
+        
         result = {
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
@@ -437,7 +459,10 @@ class WarehouseInventory(models.Model):
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
             'displacedItems': displaced_items,
-            'dispatchedItems': dispatched_items
+            'dispatchedItems': dispatched_items,
+            'criticalStockItems': critical_stock_items,
+            'temperatureSensitive': temperature_sensitive,
+            'dangerousGoods': dangerous_goods
         }
         
         _logger.info(f"Public dashboard data: {result}")
@@ -470,6 +495,9 @@ class WarehouseInventory(models.Model):
             'openOSDInventory':      self.open_osd_inventory_domain,
             'displacedItems':        self.displaced_items_domain,
             'dispatchedItems':       self.dispatched_items_domain,
+            'criticalStockItems':    self.critical_stock_items_domain,
+            'temperatureSensitive':  self.temperature_sensitive_domain,
+            'dangerousGoods':        self.dangerous_goods_domain,
         }
         
         domain = []

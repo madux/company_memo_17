@@ -85,7 +85,7 @@
                     <div id="cards-container" class="dashboard-cards">
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="toBePutInStock" data-title="Items to be Put in Stock">
-                                <div class="card-icon"><i class="fa fa-cart-plus"/></div>
+                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-toBePutInStock">0</div>
                                     <div class="card-title">Total Inventory Items in Stock</div>
@@ -94,7 +94,7 @@
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="expectedToday" data-title="Inventory Items Expected Today">
-                                <div class="card-icon"><i class="fa fa-clock-o"/></div>
+                                <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-expectedToday">0</div>
                                     <div class="card-title">Inventory Items Expected Today</div>
@@ -103,7 +103,7 @@
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="expectedTomorrow" data-title="Inventory Items Expected Tomorrow">
-                                <div class="card-icon"><i class="fa fa-hourglass-half"/></div>
+                                <div class="card-icon"><i class="fa fa-clock-o"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-expectedTomorrow">0</div>
                                     <div class="card-title">Inventory Items Expected Tomorrow</div>
@@ -112,7 +112,7 @@
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="withoutAllocatedStorage" data-title="Inventory Items without Allocated Storage">
-                                <div class="card-icon"><i class="fa fa-ban"/></div>
+                                <div class="card-icon"><i class="fa fa-cart-plus"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-withoutAllocatedStorage">0</div>
                                     <div class="card-title">Items Pending Storage Allocation</div>
@@ -139,7 +139,7 @@
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="dispatchedItems" data-title="Inventory Items Dispatched">
-                                <div class="card-icon"><i class="fa fa-truck"/></div>
+                                <div class="card-icon"><i class="fa fa-credit-card-alt"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-dispatchedItems">0</div>
                                     <div class="card-title">Inventory Items to be Dispatched Tomorrow</div>
@@ -148,7 +148,7 @@
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="longerThan90Days" data-title="Inventory Items &gt;90 Days in Stock">
-                                <div class="card-icon"><i class="fa fa-clock-rotate-left"/></div>
+                                <div class="card-icon"><i class="fa fa-unlock"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-longerThan90Days">0</div>
                                     <div class="card-title">Inventory Items longer than 90 Days in Stock</div>
@@ -156,35 +156,35 @@
                             </div>
                         </div>
                         <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
-                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
+                            <div class="warehouse-card red-card" data-category="criticalStockItems" data-title="Critical Items in Stock">
+                                <div class="card-icon"><i class="fa fa-clipboard-list"/></div>
                                 <div class="card-content">
-                                    <div class="card-count" id="count-waitingForInfo">0</div>
+                                    <div class="card-count" id="count-criticalStockItems">0</div>
                                     <div class="card-title">Critical Items in Stock</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="waitingForInfo" data-title="Inventory Items Waiting for Info">
-                                <div class="card-icon"><i class="fa fa-info-circle"/></div>
+                            <div class="warehouse-card red-card" data-category="dangerousGoods" data-title="Dangerous Goods">
+                                <div class="card-icon"><i class="fa fa-exclamation-triangle"/></div>
                                 <div class="card-content">
-                                    <div class="card-count" id="count-waitingForInfo">0</div>
+                                    <div class="card-count" id="count-dangerousGoods">0</div>
                                     <div class="card-title">Dangerous Goods</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-card">
-                            <div class="warehouse-card red-card" data-category="displacedItems" data-title="Inventory Items Displaced">
-                                <div class="card-icon"><i class="fa fa-truck-moving"/></div>
+                            <div class="warehouse-card red-card" data-category="temperatureSensitive" data-title="Temperature Sensitive">
+                                <div class="card-icon"><i class="fa fa-thermometer-half"/></div>
                                 <div class="card-content">
-                                    <div class="card-count" id="count-displacedItems">0</div>
+                                    <div class="card-count" id="count-temperatureSensitive">0</div>
                                     <div class="card-title">Temperature Sensitive</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-card">
                             <div class="warehouse-card red-card" data-category="openOSDInventory" data-title="Open OS&amp;D Inventory in Stock">
-                                <div class="card-icon"><i class="fa fa-unlock-alt"/></div>
+                                <div class="card-icon"><i class="fa fa-truck-moving"/></div>
                                 <div class="card-content">
                                     <div class="card-count" id="count-openOSDInventory">0</div>
                                     <div class="card-title">Open OS&amp;D Inventory in Stock</div>

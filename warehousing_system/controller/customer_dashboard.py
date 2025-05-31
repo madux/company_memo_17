@@ -78,7 +78,6 @@ class PublicWarehouseDashboardController(http.Controller):
                 'year': year or 'All',
             }
         }
-        # call the same model method you used for modal details
         records = request.env['stock.picking'].sudo().get_customer_dashboard_detail(action_data)
         return request.render(
             'warehousing_system.public_warehouse_detail_template',
