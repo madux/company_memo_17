@@ -11,18 +11,21 @@ html, body {
   padding: 0;
   overflow-y: auto;
 }
+
 .dashboard-cards {
   display: flex;
   flex-wrap: wrap;
   margin: -0.75rem;
   padding-bottom: 1.5rem;
 }
+
 .col-card {
   flex: 0 0 288px;
   max-width: 288px;
   padding: 0.75rem;
   box-sizing: border-box;
 }
+
 .warehouse-card {
   background-color: #f8dada;
   border: 1px solid #f1c3c3;

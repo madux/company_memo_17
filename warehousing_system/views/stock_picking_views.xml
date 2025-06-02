@@ -6,11 +6,39 @@
         <field name="inherit_id" ref="stock.view_picking_form"/>
         <field name="arch" type="xml">
           <xpath expr="//sheet/group" position="after">
-            <group string="Inbound Shipment">
+            <group string="Shipment">
               <field name="receiving_waybill_number"/>
               <field name="bl_awb_number"/>
             </group>
           </xpath>
+          
+          <xpath expr="//field[@name='owner_id']" position="after">
+              <field name="dispatch_dest_location_id"/>
+          </xpath>
+          <!-- <xpath expr="//button[@name='button_validate'][1]" position="attributes">
+            <attribute name="invisible">state in ('draft', 'confirmed', 'done', 'cancel') or dispatch_dest_location_id != False </attribute>
+          </xpath>
+          <xpath expr="//button[@name='button_validate'][2]" position="attributes">
+            <attribute name="invisible">state in ('waiting', 'assigned', 'done', 'cancel') or dispatch_dest_location_id != False </attribute>
+          </xpath> -->
+           
+          <xpath expr="//button[@name='do_print_picking']" position="attributes">
+            <attribute name="invisible">state != 'assigned' or dispatch_dest_location_id != False </attribute>
+          </xpath>
+          <xpath expr="//button[@name='action_cancel']" position="attributes">
+            <attribute name="invisible">state not in ('assigned', 'confirmed', 'draft', 'waiting') or dispatch_dest_location_id != False </attribute>
+          </xpath>
         </field>
-      </record> 
+      </record>
+
+    <!-- <record id="view_picking_tree_inherit_inventory" model="ir.ui.view">
+        <field name="name">stock.picking.tree.inbound.memo.link</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+          <xpath expr="//field[@name='state']" position="after">
+              <button name="button_validate" invisible="state in ('draft', 'done', 'cancel')" string="Validate" type="object" class="oe_highlight" data-hotkey="v" confirm="Are you sure to validate?"/>
+          </xpath>
+        </field>
+    </record> -->
 </odoo>

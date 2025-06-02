@@ -16,6 +16,7 @@
         'views/stock_picking_views.xml',
         'views/inventory_views.xml',
         'views/warehouse_dashboard_menu.xml',
+        'report/dispatch_waybill.xml',
         'report/waybill_item_report.xml',
     ],
     'assets': {

@@ -13,6 +13,7 @@
             <field name="inventory_status"/>
             <field name="actual_date_of_arrival" string="Date Arrived"/>
             <field name="expected_arrival_date" string="Expected Arrived"/>
+            <field name="days_in_warehouse" optional="hide"/>
             <field name="amount" string="Total items"/>
           </tree>
         </field>
@@ -37,23 +38,30 @@
                 <field name="use_create_lots" invisible="1"/>
                 <field name="company_id" invisible="1"/>
                 <header>
-                    <button name="action_confirm" invisible="state != 'draft'" string="Pre-allocate" confirm="Are you sure to pre allocate?" type="object" class="oe_highlight" groups="base.group_user" data-hotkey="q"/>
-                    <button name="action_assign" invisible="not show_check_availability" string="Check Availability" type="object" class="oe_highlight" groups="base.group_user" data-hotkey="w"/>
-                    <button name="button_validate" invisible="state in ('draft', 'done', 'cancel')" string="Confirm Allocation" type="object" class="oe_highlight" groups="stock.group_stock_user" data-hotkey="v" confirm="Are you sure to validate?"/>
+                    <button name="action_confirm" invisible="state != 'draft' or inventory_status in ['awaiting_dispatch', 'dispatch', 'cancel']" string="Pre-allocate" confirm="Are you sure to pre allocate?" type="object" class="oe_highlight" groups="base.group_user" data-hotkey="q"/>
+                    <button name="action_assign" invisible="not show_check_availability or inventory_status in ['awaiting_dispatch', 'dispatch', 'cancel']" string="Check Availability" type="object" class="oe_highlight" groups="base.group_user" data-hotkey="w"/>
+                    <button name="button_validate" invisible="state in ('draft', 'done', 'cancel') or inventory_status in ['awaiting_dispatch', 'dispatch', 'cancel']" string="Confirm Allocation" type="object" class="oe_highlight" groups="stock.group_stock_user" data-hotkey="v" confirm="Are you sure to validate?"/>
                     <!-- <button name="button_validate" invisible="state in ('draft', 'done', 'cancel')" string="Confirm Allocation" type="object" groups="stock.group_stock_user" class="o_btn_validate" data-hotkey="v"/> -->
+                    <button name="button_validate" invisible="inventory_status not in ['awaiting_dispatch']" string="Validate Dispatch" type="object" class="oe_highlight" data-hotkey="v" confirm="Are you sure to validate?"/>
                     <widget name="signature" string="Sign" highlight="1" invisible="not id or picking_type_code != 'outgoing' or state != 'done'" full_name="partner_id" groups="stock.group_stock_sign_delivery"/>
                     <widget name="signature" string="Sign" invisible="not id or picking_type_code != 'outgoing' or state == 'done'" full_name="partner_id" groups="stock.group_stock_sign_delivery"/>
-                    <button name="do_print_picking" string="Print" groups="stock.group_stock_user" type="object" invisible="state != 'assigned'" data-hotkey="o"/>
+                    <!-- <button name="do_print_picking" string="Print" groups="stock.group_stock_user" type="object" invisible="state != 'assigned'" data-hotkey="o"/> -->
                     <!-- <button string="Print Labels" type="object" name="action_open_label_type"/>
                     <button name="298" string="Print" invisible="state != 'done'" type="action" groups="base.group_user" data-hotkey="o"/> -->
                     <!-- <button name="316" string="Return" invisible="state != 'done'" type="action" groups="base.group_user" data-hotkey="k"/> -->
-                    <field name="inventory_status" widget="statusbar" statusbar_visible="draft,allocated,done"/>
+                    <field name="inventory_status" invisible="is_dispatch == True" widget="statusbar" statusbar_visible="draft,allocated,done"/>
+                    <field name="inventory_status" invisible="is_dispatch == False" widget="statusbar" statusbar_visible="awaiting_dispatch,dispatch"/>
                     <field name="state" widget="statusbar" invisible="1" statusbar_visible="draft,assigned,done"/>
                     <!-- <field name="state" widget="statusbar" invisible="picking_type_code == 'incoming'" statusbar_visible="draft,confirmed,assigned,done"/> -->
-                    <button name="action_cancel" invisible="state not in ('assigned', 'confirmed', 'draft', 'waiting')" string="Cancel" groups="base.group_user" type="object" confirm="Are you sure you want to cancel this transfer?" data-hotkey="x"/>
+                    <!-- <button name="action_cancel" invisible="state not in ('assigned', 'confirmed', 'draft', 'waiting')" string="Cancel" groups="base.group_user" type="object" confirm="Are you sure you want to cancel this transfer?" data-hotkey="x"/> -->
+                    <button name="action_dispatch_moves" invisible="inventory_status not in ('done') or is_dispatch == True" string="Create Dispatch" type="object" confirm="Are you sure you want to dispatch this?" data-hotkey="x"/>
+                    <button name="confirm_dispatch" invisible="inventory_status not in ['awaiting_dispatch'] or is_dispatch == True" string="Confirm Dispatch" type="object" confirm="Are you sure you want to confirm dispatch?" data-hotkey="x"/>
+                    <!-- <button name="action_cancel" invisible="state not in ('assigned', 'confirmed', 'draft', 'waiting')" string="Cancel" groups="base.group_user" type="object" confirm="Are you sure you want to cancel this transfer?" data-hotkey="x"/> -->
                     <button name="button_financial_file" type="object" string="View Financial File" 
                     class="oe_highlight btn-sm" id="view_ff" data-hotkey="q"
                     invisible="financial_id != False"/>
+                    <button name="print_way_bill" invisible="inventory_status not in ['done', 'dispatch'] or picking_type_code != 'outgoing'" string="Print waybill" type="object" class="oe_highlight" data-hotkey="v"/>
+                    <!-- <button name="print_way_bill" invisible="inventory_status not in ['dispatch']" string="Print waybill" type="object" class="oe_highlight" data-hotkey="v"/> -->
                 </header>
                 <sheet> 
                     <div class="oe_button_box" name="button_box" invisible="1">
@@ -96,29 +104,40 @@
                         <group>
                             <field name="warehouse_id" placeholder="Select Warehouse *" options="{'no_create': True}"/>
                             <field name="dummy_picking_type_ids" widget="many2many_tags" invisible="1"/>
-                            <field name="picking_type_code" invisible="0"/>
+                            <field name="picking_type_code" invisible="1"/>
                             <field name="picking_type_id" options="{'no_open': True}" readonly="state != 'draft' and id"
                             domain="[('id', 'in', dummy_picking_type_ids)]"/>
                             <!-- <field name="picking_type_id" options="{'no_open': True}" invisible="hide_picking_type"  readonly="state != 'draft' and id"
                             domain="[('picking_type_code', 'in', ['outgoing'])]" invisible="picking_type_code in ['incoming']"/> -->
                              <!-- domain="context.get('restricted_picking_type_code') and [('code', '=', context.get('restricted_picking_type_code'))] or [(1,'=',1)]"/> -->
-                            <field name="location_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
-                            <field name="location_dest_id" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
-                            <field name="location_id" options="{'no_create': True}" string="Source Location" readonly="state == 'done'"/>
-                            <field name="location_dest_id" options="{'no_create': True}" string="Destination Location" readonly="state == 'done'"/>
-                            <field name="financial_id" placeholder="Select Warehouse File" required="1" options="{'no_create': True, 'no_open': True}"/>
-                            <!-- <button name="button_financial_file" type="object" string="View Financial File" class="oe_highlight btn-sm" id="view_ff" data-hotkey="q"/> -->
-                            <field name="origin" string="Financial file No." placeholder="e.g. ME0001" readonly="state in ['cancel', 'done']"/>
+                            <field name="customer_id" nolabel="0" required="0" string="Client" invisible="is_dispatch != True" readonly="0"/>
+                            <field name="financial_id" placeholder="Select Warehouse File" invisible="picking_type_code in ['outgoing']" required="inventory_status not in ['awaiting_dispatch', 'dispatch']" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="origin" string="Financial file No." placeholder="e.g. ME0001" invisible="picking_type_code in ['outgoing']" readonly="state in ['cancel', 'done']"/>
                             <!-- <div class="o_td_label">
                                 <label for="partner_id" string="Client" style="font-weight:bold;" invisible="picking_type_code != 'outgoing'"/>
                                 <label for="partner_id" string="Client" style="font-weight:bold;" invisible="picking_type_code != 'incoming'"/>
                                 <label for="partner_id" string="Client" style="font-weight:bold;" invisible="picking_type_code in ['incoming', 'outgoing']"/>
                             </div> -->
                             <field name="partner_id" nolabel="1" required="0" string="Client" invisible="1" readonly="1"/>
-                            <field name="customer_id" nolabel="0" required="0" string="Client" readonly="0"/>
-                            <field name="state" readonly="1" invisible="1"/>
+                            <field name="customer_id" nolabel="0" required="0" string="Client" invisible="is_dispatch == True" readonly="0"/>
+                            <field name="customer_address" placeholder="e.g. No 1 Maduka Sopulu Chris Avenue" 
+                            readonly="state in ['cancel', 'done']" invisible="is_dispatch != True"/>
+                            <field name="dispatch_company" invisible="0" options="{'no_create': True}" string="Dispatch Company" readonly="state == 'done'"/>
+                            <field name="transport_details" invisible="0" options="{'no_create': True}" readonly="state == 'done'"/>
+                            
+                            <field name="location_id" invisible="1" options="{'no_create': True}" string="Supplier" readonly="state == 'done'"/>
+                            <field name="location_dest_id" invisible="1" options="{'no_create': True}" string="Dispatch Company" readonly="state == 'done'"/>
+                            
+                            
+                            
+                            
+                            <field name="location_id" string="Supplier" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
+                            <field name="location_dest_id" string="Dispatch Company" groups="!stock.group_stock_multi_locations" invisible="1" readonly="state == 'done'"/>
+                            
                         </group>
                         <group>
+                            
+                            <field name="state" readonly="1" invisible="1"/>
                             <label for="scheduled_date"/>
                             <div class="o_row">
                                 <field name="scheduled_date" readonly="state in ['cancel', 'done']" required="id" decoration-warning="state not in ('done', 'cancel') and scheduled_date &lt; now" decoration-danger="state not in ('done', 'cancel') and scheduled_date &lt; current_date" decoration-bf="state not in ('done', 'cancel') and (scheduled_date &lt; current_date or scheduled_date &lt; now)"/>
@@ -133,8 +152,13 @@
                             <!-- <field name="inbound_picking_id" placeholder="Related Inbound Shipment" 
                                    options="{'no_create': True}" domain="[('picking_type_code','=','incoming')]" /> -->
                             <field name="backorder_id" invisible="not backorder_id"/>
-                            <field name="owner_id" invisible="picking_type_code != 'incoming'" readonly="state in ['cancel', 'done']"/> 
+                            <field name="owner_id" invisible="1"/> 
                             <field name="actual_date_of_arrival" />
+                            <field name="days_in_warehouse" />
+                            <field name="is_dispatch" invisible="1" readonly="1"/>
+                            <field name="dispatch_dest_location_id" invisible="inventory_status not in ['done', 'dispatch', 'awaiting_dispatch'] or is_dispatch != True" readonly="inventory_status not in ['done', 'awaiting_dispatch']"/>
+                            <field name="expected_dispatch_arrival_date" string="Expected Dispatch Date" invisible="inventory_status not in ['dispatch', 'awaiting_dispatch'] or is_dispatch != True" required="inventory_status in ['awaiting_dispatch']" readonly="inventory_status not in ['awaiting_dispatch']"/>
+
                         </group>
                     </group>
                     
@@ -145,23 +169,23 @@
                             <field name="customer_id" string="Customer" required="0" invisible="1" placeholder="Customer *" options="{'no_create': True}"/>
                             <field name="intended_vessel" placeholder="Intended Vessel" options="{'no_create': True}"/>
                             <field name="supplier_po_number" placeholder="e.g PO012992"/>
-                            <field name="receiving_waybill_number" placeholder="Waybill Number" />
+                            <field name="receiving_waybill_number" placeholder="Waybill No." invisible="1"/>
                             <field name="bl_awb_number"/>
                         </group>
                         <group>
                             <field name="related_inbound_shipment" invisible="picking_type_code != 'outgoing'"/>
-                            <field name="critical_equipment" placeholder="Critical Equipment" options="{'no_create': True}"/>
+                            <field name="critical_equipment" invisible="1" placeholder="Critical Equipment" options="{'no_create': True}"/>
                             <field name="unit_of_measure_id" placeholder="Unit of Measure" options="{'no_create': True}"/>
                             <field name="amount" string="Total items" widget="Float"/>
                         </group>
                     </group>
          
                     <notebook>
-                        <page string="Packages" name="operations">
-                            <field name="move_ids_without_package" mode="tree,kanban" widget="stock_move_one2many" readonly="state == 'done' and is_locked" context="{'default_company_id': company_id, 'default_date': scheduled_date, 'default_date_deadline': date_deadline, 'picking_type_code': picking_type_code, 'default_picking_id': id, 'form_view_ref': 'warehousing_system.view_stock_move_operations_form_extend', 'address_in_id': partner_id, 'default_picking_type_id': picking_type_id, 'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" add-label="Add a Product">
-                                <tree decoration-muted="scrapped == True or state == 'cancel' or (state == 'done' and is_locked == True)" string="Stock Moves" editable="1">
+                        <page string="Packages" name="operations"> 
+                            <field name="move_ids_without_package" mode="tree,kanban" widget="stock_move_one2many"  readonly="state not in ['assigned', 'cancelled', 'draft'] or inventory_status in ['dispatch', 'done']" context="{'default_company_id': company_id, 'default_date': scheduled_date, 'default_date_deadline': date_deadline, 'picking_type_code': picking_type_code, 'default_picking_id': id, 'form_view_ref': 'warehousing_system.view_stock_move_operations_form_extend', 'address_in_id': partner_id, 'default_picking_type_id': picking_type_id, 'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" add-label="Add a Stock">
+                                <tree decoration-muted="scrapped == True or state == 'cancel' or (state == 'done' and is_locked == True)" string="Stock Moves" editable="0">
                                     <field name="company_id" column_invisible="True"/>
-                                    <field name="picking_id" column_invisible="True"/>
+                                    <field name="dispatch_picking_id" invisible="1" column_invisible="True"/>
                                     <field name="name" column_invisible="True"/>
                                     <field name="state" readonly="0" column_invisible="True"/>
                                     <field name="picking_type_id" column_invisible="True"/>
@@ -172,7 +196,6 @@
                                     <field name="scrapped" column_invisible="True"/>
                                     <field name="picking_code" column_invisible="True"/>
                                     <field name="product_type" column_invisible="True"/>
-                                   
                                     <field name="show_reserved" column_invisible="True"/>
                                     <field name="additional" column_invisible="True"/>
                                     <field name="move_lines_count" column_invisible="True"/>
@@ -181,6 +204,7 @@
                                     <field name="has_tracking" column_invisible="True"/>
                                     <field name="display_assign_serial" column_invisible="True"/>
                                     <field name="product_id" 
+                                    domain="[('detailed_type','=', 'product')]"
                                     context="{'default_detailed_type': 'product'}" required="1" 
                                     readonly="(state != 'draft' and not additional) or move_lines_count &gt; 0" 
                                     force_save="1" help="This shows only product that is stockable"/>
@@ -197,16 +221,24 @@
                                     <field name="display_import_lot" column_invisible="True"/>
                                     <field name="picking_type_entire_packs" column_invisible="True"/>
                                     <field name="product_packaging_id" groups="product.group_stock_packaging" context="{'default_product_id': product_id}" readonly="not product_id"/>
-                                    <field name="product_uom_qty" string="Demand" readonly="not is_initial_demand_editable"/>
-                                    <field name="show_details_visible" string="Put Away" default="True" readonly="0" force_save="1"/>
+                                    <!-- <field name="product_uom_qty" string="Quantity" readonly="not is_initial_demand_editable"/> -->
+                                    <field name="product_uom_qty" string="Quantity"/>
+                                    <field name="show_details_visible" string="Put Away" column_invisible="True" default="True" readonly="0" force_save="1"/>
                                     <field name="forecast_expected_date" column_invisible="True"/>
                                     <field name="forecast_availability" string="Forecast" optional="hide" column_invisible="parent.state in ('draft', 'done') or parent.picking_type_code != 'outgoing'" widget="forecast_widget"/>
                                     <field name="product_qty" readonly="1" column_invisible="True"/>
-                                    <field name="quantity" string="Quantity" readonly="not is_quantity_done_editable" column_invisible="parent.state=='draft'" decoration-danger="product_uom_qty and quantity &gt; product_uom_qty and parent.state not in ['done', 'cancel']"/>
+                                    <field name="quantity" string="Quantity" invisible="1" column_invisible="True"/>
+                                    <!-- <field name="quantity" string="Quantity" invisible="1" readonly="not is_quantity_done_editable" column_invisible="parent.state=='draft'" decoration-danger="product_uom_qty and quantity &gt; product_uom_qty and parent.state not in ['done', 'cancel']"/> -->
                                     <field name="product_uom" string="Unit"/>
-                                    <field name="is_label_printed" column_invisible="False"/>
-                                    <field name="no_of_items"/>
+                                    <field name="is_label_printed" column_invisible="True"/>
+                                    <field name="no_of_items" column_invisible="1"/>
+                                    <field name="length_mtr" string="Lenght(mm)"/>
+                                    <field name="width_mtr" string="Width(mm)"/>
+                                    <field name="height_mtr" string="Height(mm)" invisible="0"/>
+                                    <field name="area_m2"/>
+                                    <field name="volume_m3"/>
                                     <field name="item_picture" widget="image" class="oe_avatar"/>
+                                    <!-- <field name="critical_equipment" options="{'no_create': True}"/> -->
                                     <field name="picked" optional="hide" column_invisible="parent.state=='draft'"/>
                                     <!-- <field name="lot_ids" widget="many2many_tags" column_invisible="parent.state == 'draft'" optional="hide" options="{'create': [('parent.use_create_lots', '=', True)]}" context="{'default_company_id': company_id, 'default_product_id': product_id, 'active_picking_id': parent.id}" domain="[('product_id','=',product_id)]"/> -->
                                     <field name="lot_ids" optional="hide" widget="many2many_tags" context="{'default_company_id': company_id, 'default_product_id': product_id, 'active_picking_id': parent.id}" domain="[('product_id','=',product_id)]"/>
@@ -218,6 +250,7 @@
                             </field>
                             <field name="id" invisible="1"/>
                             <field name="package_level_ids" context="{'default_location_id': location_id, 'default_location_dest_id': location_dest_id, 'default_company_id': company_id}" invisible="not picking_type_entire_packs" readonly="state == 'done'"/>
+                            
                             <button class="btn-secondary float-end" name="action_put_in_pack" type="object" string="Put in Pack" invisible="state in ('done', 'cancel')" data-hotkey="shift+g"/>
                         </page>
                         <page string="Additional Info" name="extra">
@@ -231,6 +264,64 @@
                                 </group>
                             </group>
                         </page>
+                        <page string="Dispatch Lines" invisible="picking_type_code == 'incoming'" name="dispatch_page">
+                            <!-- <field name="dispatch_picking_ids_packages" readonly="inventory_status not in ['awaiting_dispatch']" context="{ 'picking_type_code': 'outgoing', 'default_dispatch_picking_id': id, 'form_view_ref': 'stock.view_move_form', 'address_in_id': partner_id, 'default_partner_id': partner_id}" add-label="Add Dispatch line"/> -->
+                            <field name="dispatch_picking_ids_packages" readonly="inventory_status not in ['awaiting_dispatch']" context="{'form_view_ref': 'warehousing_system.view_warehouse_inventory_form'}"/>
+                        </page>
+                        <page name="waybill" string="Drivers / Transportation" invisible="picking_type_code == 'incoming'">
+                            <form string="Waybill">
+                                <sheet>
+                                    <div class="oe_title">
+                                        <h2>
+                                            WAYBILLS / TRANSPORT DETAILS
+                                        </h2>
+                                    </div>
+                                    <!-- <div class='alert alert-info' role="alert">
+                                        Kindly add the items you want to transport here.
+                                        <button name="print_way_bill" type="object" class="oe_highlight oe_left sm pl-3" string="Print Way bill"/>
+                                        <button name="send_client_mail_gate_pass" type="object" class="oe_highlight oe_left sm" string="Send mail to Client for gate pass"/>
+                                    </div> -->
+                                    <newline/>
+                                    <group>
+                                        <group>
+                                            <field name="truck_company_name" readonly="inventory_status in ('done')"/>
+                                            <field name="truck_reg" readonly="inventory_status in ('done')"/>
+                                            <field name="truck_type" readonly="inventory_status in ('done')"/>
+                                            <field name="truck_driver" readonly="inventory_status in ('done')"/>
+                                            <field name="truck_driver_phone" readonly="inventory_status in ('done')"/>
+                                        </group>
+                                         
+                                        <group>
+                                            <field name="waybill_from" readonly="inventory_status in ('done')"/>
+                                            <field name="waybill_to" readonly="inventory_status in ('done')"/>
+                                            <field name="waybill_date" readonly="inventory_status in ('done')"/>
+                                            <field name="waybill_expected_arrival_date" readonly="inventory_status in ('done')"/>
+                                            <field name="waybill_note" required="0"/>
+                                            <!-- <field name="waybill_items"/> -->
+                                        </group>
+                                    </group>
+                                    <!-- <notebook>
+                                        <page string="Waybill items" name="wyitem">
+                                            <field name="waybill_ids" readonly="inventory_status in ('done')">
+                                                <tree string="waybill" editable="bottom">
+                                                    <field name="product_id" required="1"/>
+                                                    <field name="item" required="1"/>
+                                                    <field name="product_id" required="1" options="{'no_open': True,'no_create': True}"/>
+                                                    <field name="current_location" required="1"/>
+                                                    <field name="quantity" required="1"/>
+                                                    <field name="uom" required="1"/>
+                                                    <field name="uom_id" required="1"/>
+                                                    <field name="waybill_number"/>
+                                                    <field name="waybill_desc"/>
+                                                    <field name="loaded_by" required="1"/>
+                                                    <field name="loaded_date"/>
+                                                </tree>
+                                            </field>
+                                        </page>
+                                    </notebook> -->
+                                </sheet>
+                            </form>
+                        </page>
                     </notebook>
                 </sheet>
             </form>
@@ -242,8 +333,8 @@
         <field name="name">Warehouse Inventory Dispatch</field>
         <field name="res_model">stock.picking</field>
         <field name="view_mode">form,tree</field>
-        <field name="context">{'default_picking_type_code': 'outgoing'}</field>
-        <field name="domain">[('financial_id', '!=', False),('picking_type_code','=','outgoing')]</field>
+        <field name="context">{'default_picking_type_code': 'outgoing','default_is_dispatch': True, 'default_inventory_status': 'awaiting_dispatch'}</field>
+        <field name="domain">[('picking_type_code','=','outgoing')]</field>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'tree', 'view_id': ref('warehousing_system.view_warehouse_inventory_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('warehousing_system.view_warehouse_inventory_form')})]"/>
@@ -287,6 +378,13 @@
         name="Warehouse Setup"
         parent="warehousing_system.menu_warehouse_system_root"
         sequence="100"/>
+
+    <menuitem
+        id="menu_stock_reporting_config"
+        name="Stock Reporting"
+        action="stock.dashboard_open_quants"
+        parent="warehousing_system.menu_warehouse_system_root"
+        sequence="40"/>
 
     <record id="warehousing_system.menu_warehouse_system_root_configuration" model="ir.ui.menu">
         <field name="child_id" eval="[

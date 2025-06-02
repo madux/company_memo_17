@@ -1,15 +1,14 @@
 from odoo import api, fields, models
 from datetime import date, timedelta
 import logging
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
-import logging
-
-_logger = logging.getLogger(__name__)
-    
 class WarehouseInventory(models.Model):
     _inherit = 'stock.picking'
+    _order = "id desc"
+    
     
     @api.onchange('warehouse_id')
     def onchange_warehouse(self):
@@ -35,8 +34,9 @@ class WarehouseInventory(models.Model):
     financial_id = fields.Many2one(
         'memo.model',
         string="Financial File",
+        copy=True,
         help="Refers to the Purchase Order associated with this inventory receipt.",
-        # domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
+        domain=[('memo_type.memo_key','in', ['transport', 'warehouse'])]
     )
     related_inbound_shipment = fields.Many2one(
         'stock.picking',
@@ -45,36 +45,70 @@ class WarehouseInventory(models.Model):
     warehouse_id = fields.Many2one(
         'stock.warehouse',
         string="Warehouse",
+        copy=True,
         help="Select the warehouse where the goods arrived or are expected."
     )
     inventory_status = fields.Selection(selection=[
         ('draft', "Draft"),
-        ('arrived', "Arrived at Warehouse"),
-        ('allocated', "Pre-Allocated"),
-        ('done', 'Completed'),
+        ('arrived', "Allocated"),
+        ('allocated', "Put Away"),
+        ('done', 'Stored'),
+        ('awaiting_dispatch', 'Awaiting Dispatch'),
+        ('dispatch', 'Dispatched'),
         ('cancelled', 'Cancelled')
-    ], string="Inventory Status", default='draft', index=True, tracking=True)
+    ], string="Inventory Status",copy=True, default='draft', index=True, tracking=True)
     actual_date_of_arrival = fields.Date(
         string="Actual Arrival Date",
-        tracking=True
+        tracking=True,
+        copy=False,
     )
+    days_in_warehouse = fields.Integer(
+        copy=False,
+        string="Days in Storage (days)",
+        compute="compute_days_in_storage"
+    )
+
+    @api.depends('actual_date_of_arrival')
+    def compute_days_in_storage(self):
+        for rec in self:
+            if rec.actual_date_of_arrival:
+                today = fields.Date.today()
+                date_of_arrival = rec.actual_date_of_arrival
+                diff = today - date_of_arrival
+                rec.days_in_warehouse= diff.days
+            else:
+                rec.days_in_warehouse= 0
+
     receiving_supplier_id = fields.Many2one(
         'res.partner',
         string="Delivering Supplier/Vendor",
-        domain=[('supplier_rank', '>', 0)],
+        # domain=[('supplier_rank', '>', 0)],
         help="The supplier who delivered the goods."
     )
     supplier_po_number = fields.Char(
-        string="PO Number",
+        string="PO No.",
+        copy=True,
         help="PO number from the supplier's system, if different from Odoo's PO."
     )
+    dispatch_company = fields.Char(
+        string="Dispatch company",
+        copy=True,
+    )
+    transport_details = fields.Char(
+        string="Transport Detail",
+    )
     receiving_waybill_number = fields.Char(
-        string="Waybill Number (RL/AWB)",
+        string="Waybill No. (RL/AWB)",
+        copy=True,
         help="Receiving Log / Air Waybill number associated with the delivery."
     )
-    bl_awb_number = fields.Char(string="BL/AWB Number")
+    bl_awb_number = fields.Char(string="BL/AWB No.", copy=True)
     expected_arrival_date = fields.Date(
         string="Expected Arrival Date",
+        tracking=True
+    )
+    expected_dispatch_arrival_date = fields.Date(
+        string="Expected Dispatch Arrival Date",
         tracking=True
     )
     critical_equipment = fields.Selection([
@@ -93,6 +127,9 @@ class WarehouseInventory(models.Model):
         string="Customer",
         help="The ultimate customer."
     )
+    customer_address = fields.Text(
+        string="Customer Address",
+    )
     po_line_ids = fields.One2many(
         'purchase.order.line',
         'order_id',
@@ -110,18 +147,189 @@ class WarehouseInventory(models.Model):
         help="Total items for each line",
         compute="compute_total_items"
     )
+    
+    # TRANSPORT
+    truck_company_name = fields.Many2one('res.partner', string='Truck company Name')
+    truck_reg = fields.Char(string='Truck registration No.')
+    truck_type = fields.Char(string='Truck Type')
+    truck_driver = fields.Many2one('res.partner', string='Driver details')
+    truck_driver_phone = fields.Char(string='Driver Phone')
+     
+    waybill_from = fields.Char(string='Pickup Location?')
+    waybill_to = fields.Char(string='Drop Off Location')
+    waybill_date = fields.Datetime(string='Date of Transportation')
+    waybill_expected_arrival_date = fields.Datetime(string='Expected Arrival')
+    waybill_note = fields.Char(string='Waybill Note')
+    
 
+    # dispatch_move_ids_packages = fields.One2many(
+    #     'stock.move',
+    #     'dispatch_picking_id',
+    #     string="Dispatch Moves"
+    # )
+    dispatch_picking_ids_packages = fields.Many2many(
+        'stock.picking',
+        'stock_picking_dispatch_rel',
+        'stock_picking_id',
+        'stock_dispatch_picking_id',
+        string="Dispatch Picking"
+    )
+    dispatch_dest_location_id = fields.Many2one(
+        'stock.location', 
+        string="Dispatch location"
+    )
+    
+    def confirm_dispatch(self):
+        '''Checks if item exist in inventory and
+        set status to dispatched
+        '''
+        # tt = self.env['stock.quant'].sudo()._get_available_quantity(self.env['product.product'].browse([10]), self.env['stock.location'].browse([18]), allow_negative=False) # or 0.0
+        # raise ValidationError(f"{tt},{self.env['product.product'].browse([10])}, {self.env['stock.location'].browse([18])} ")
+        for pck in self.dispatch_picking_ids_packages:
+            for count, pml in enumerate(pck.move_ids_without_package, 1):
+                tt_availability = self.env['stock.quant'].sudo()._get_available_quantity(pml.product_id, pml.location_id, allow_negative=False) # or 0.0
+                if pml.quantity > tt_availability:
+                    raise ValidationError(f"""
+                                          At line {count}: The quantity to dispatch is lesser than the amount \n remaining in the inventory location {(pml.location_id.name)}. The product {(pml.product_id.name)} available quantity is {tt_availability}"""
+                                          )
+                # else:
+                #     raise ValidationError("This dispatch does not have any product / items allocation during receipts")
+                
+            # pck.button_validate()
+            if pck.state not in ['done']:
+                raise ValidationError("please validate the dispatch operation before confirming")
+        self.inventory_status = 'dispatch'
+        
+    is_dispatch = fields.Boolean()
+    
+    # def action_validate_owner_stock(self, picking):
+    #     '''check the lines to ensure owner still have products in stock'''
+    #     for rec in picking.move_ids_without_package:
+    #         if rec.product_id.id:
+    #             owner_stock_quants = self.env['stock.quant'].sudo().search([
+    #             ('owner_id', '=', self.customer_id.id),
+    #             ('product_id', '=', self.product_id.id),
+    #             '|',('warehouse_id', '=', self.warehouse_id.id),
+    #             ('location_id', '=', self.location_id.id)
+    #             ])
+    #             total_quantity = sum([qt.quantity for qt in owner_stock_quants])
+    #             if total_quantity < 1:
+    #                 items_to_remove
+            
+    def action_dispatch_moves(self):
+        '''set is dispatch to true and enable dispatch functionality'''
+        self.action_validate_owner_stock(self.customer_id)
+        if self.move_ids_without_package:
+            if not self.dispatch_picking_ids_packages:
+                picking_id = self.copy()
+                warehouse_picking_types = self.env['stock.picking.type'].search([
+                    ('warehouse_id', '=', self.warehouse_id.id),
+                    ('code', '=', 'outgoing'),
+                    ], limit=1)
+                picking_id.update({
+                    "name": f"DISP/{picking_id.name}",
+                    'location_id': self.location_dest_id.id,
+                    'location_dest_id': self.dispatch_dest_location_id.id,
+                    'related_inbound_shipment': self.id,
+                    'inbound_picking_id': self.id,
+                    'is_dispatch': True,
+                    'picking_type_code': 'outgoing',
+                    'picking_type_id': warehouse_picking_types and warehouse_picking_types.id,
+                    'inventory_status': 'awaiting_dispatch',
+                })
+                 
+                self.dispatch_picking_ids_packages = [(6, 0, [picking_id.id])]
+                
+                # '''check the lines to ensure owner still have products in stock'''
+                for pi in self.dispatch_picking_ids_packages:
+                    for ml in pi.move_ids_without_package:
+                        if ml.product_id.id:
+                            owner_stock_quants = self.env['stock.quant'].sudo().search([
+                            ('owner_id', '=', self.customer_id.id),
+                            ('product_id', '=', ml.product_id.id),
+                            '|',('warehouse_id', '=', self.warehouse_id.id),
+                            ('location_id', '=', self.location_id.id)
+                            ])
+                            total_quantity = sum([qt.quantity for qt in owner_stock_quants])
+                            if total_quantity < 1:
+                                pi.move_ids_without_package = [(3, ml.id)]
+            else:
+                picking_id = self.dispatch_picking_ids_packages[0]
+            picking_id.action_confirm()
+            self.inventory_status = "awaiting_dispatch"
+            return self.button_view_picking(picking_id.id)
+        else:
+            raise ValidationError("No stock move lines to Dispatch!!!")
+    
+    def print_way_bill(self):
+        return self.env.ref('warehousing_system.print_dispatch_waybill_report').report_action(self)
+    
+    def button_view_picking(self, pickingId):
+        view_id = self.env.ref('warehousing_system.view_warehouse_inventory_form').id
+        ret = {
+            'name': "Dispatching",
+            'view_mode': 'form',
+            'view_id': view_id,
+            'view_type': 'form',
+            'res_model': 'stock.picking',
+            'res_id': pickingId,
+            'type': 'ir.actions.act_window',
+            'domain': [],
+            'target': 'current'
+            }
+        return ret     
+                
     @api.depends('move_ids_without_package.no_of_items')
     def compute_total_items(self):
         for rec in self:
-            total = 0
             if rec.move_ids_without_package:
-                sum_items = sum([re.no_of_items for re in self.mapped('move_ids_without_package')])
-                total += sum_items 
+                sum_items = sum([re.no_of_items for re in rec.mapped('move_ids_without_package')])
+                rec.amount = sum_items if sum_items > 1 else len( rec.move_ids_without_package.ids)
             else:
-                total += 0 
-            rec.amount = total 
-            
+                rec.amount = 0 
+    
+    @api.onchange('customer_id')
+    def _onchange_customer_id(self):
+        if self.customer_id:
+            self.owner_id = self.customer_id.id
+            if self.picking_type_code == "outgoing":
+                quant = self.env['stock.quant'].sudo()
+                move = self.env['stock.move'].sudo()
+                '''Get the owner stocks greater than 0 in given warehouse'''
+                owner_stock_quants = quant.search([
+                    ('owner_id', '=', self.customer_id.id),
+                    # ('quantity', '>', 0),
+                    '|',('warehouse_id', '=', self.warehouse_id.id),
+                    ('location_id', '=', self.location_id.id)
+                    ])
+                list_items = {}
+                # raise ValidationError(f"{owner_stock_quants}, {self.customer_id.id} {self.location_id.id}")
+                for sq in owner_stock_quants:
+                    '''Build stock moves dynamically'''
+                    # product_items = {'id': False, 'name': "", 'qty': 0}
+                    productId = sq.product_id.id
+                    if str(productId) in list_items:
+                        list_items[str(productId)]['qty'] += sq.available_quantity
+                    else:
+                        list_items[str(productId)] = {
+                            'id': productId, 
+                            'qty': sq.available_quantity, 
+                            'name': sq.product_id.name
+                            }
+                for k, v in list_items.items():   
+                    sq_vals = {
+                        "name": f"{v.get('name')}-{v.get('id')}",
+                        "product_id": v.get('id'),
+                        "product_uom_qty": v.get('qty'),
+                        "remaining_qty": v.get('qty'),
+                        "product_uom": self.env['product.product'].sudo().browse([v.get('id')]).uom_id.id,
+                        "picking_id": self.id,
+                        "state": "draft",
+                        "location_id": self.location_id.id,
+                        "location_dest_id": self.location_dest_id.id,
+                    }
+                    self.move_ids_without_package = [(0, 0, sq_vals)]
+        
     @api.onchange('financial_id')
     def _onchange_financial_id_for_items(self):
         for pick in self:
@@ -130,6 +338,7 @@ class WarehouseInventory(models.Model):
                 self.origin = self.financial_id.code
                 self.partner_id = self.financial_id.client_id.id
                 self.customer_id = self.financial_id.client_id.id
+                self.owner_id = self.financial_id.client_id.id
                 if not self.receiving_supplier_id and self.financial_id.client_id:
                     self.receiving_supplier_id = self.financial_id.client_id
                 pick.move_ids_without_package = [(5, 0, 0)]
@@ -182,114 +391,32 @@ class WarehouseInventory(models.Model):
     
     def action_confirm(self):
         res = super(WarehouseInventory, self).action_confirm()
-        self.inventory_status = 'allocated'
+        self.inventory_status = 'allocated' if not self.dispatch_dest_location_id else 'awaiting_dispatch'
         return res
     
     def button_validate(self):
+        'validate transport details'
+        if self.is_dispatch:
+            if not self.truck_company_name or not self.truck_reg or not self.truck_type \
+                or not self.truck_driver or not self.waybill_from or not self.waybill_to or not self.waybill_date:
+                raise ValidationError('Please ensure all transportation details are filled')
+        for rec in self.move_ids_without_package:
+            if rec.product_uom_qty <= 0:
+                raise ValidationError(f'{rec.product_id.name} move lines quantity contains negative stock. It must be above 0')
+            rec.update({
+                'quantity': rec.product_uom_qty,
+                # 'product_qty': rec.product_uom_qty,
+            })
+        
         res = super(WarehouseInventory, self).button_validate()
-        self.inventory_status = 'done'
+        self.inventory_status = 'done' if not self.dispatch_dest_location_id and self.inventory_status not in 'awaiting_dispatch' else 'dispatch'
         return res
     
     def action_cancel(self):
         res = super(WarehouseInventory, self).action_cancel()
         self.inventory_status = 'cancelled'
         return res
-    
-    
-    def get_base_domain(self, filters):
-        base_domain = []
-         
-        if filters.get('client') and filters['client'].strip():
-            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
-            _logger.info(f'Customer: {base_domain}')
-        
-        # if filters.get('fileType'):
-        #     # base_domain.append(('inventory_status', '=', filters['fileType']))
-        #     _logger.info('Not implemented...continuing with warehouse')
-        
-        # if filters.get('projectNo') and filters['projectNo'].strip():
-        #     base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
-        
-        # if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-        #     month_mapping = {
-        #         'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-        #         'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-        #     }
-            
-        #     year = fields.Date.today().year
-        #     if filters.get('year') and filters['year'] != 'All':
-        #         try:
-        #             year = int(filters['year'])
-        #         except (ValueError, TypeError):
-        #             pass
-            
-        #     if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
-        #         month_num = month_mapping[filters['month']]
-        #         start_date = fields.Date.to_string(date(year, month_num, 1))
-                
-        #         if month_num == 12:
-        #             end_date = fields.Date.to_string(date(year + 1, 1, 1))
-        #         else:
-        #             end_date = fields.Date.to_string(date(year, month_num + 1, 1))
-                    
-        #         base_domain.append(('create_date', '>=', start_date))
-        #         base_domain.append(('create_date', '<', end_date))
-        #     elif filters.get('year') and filters['year'] != 'All':
-        #         start_date = fields.Date.to_string(date(year, 1, 1))
-        #         end_date = fields.Date.to_string(date(year + 1, 1, 1))
-        #         base_domain.append(('create_date', '>=', start_date))
-        #         base_domain.append(('create_date', '<', end_date))
-            
-        return base_domain
-    
-    def waiting_for_info_domain(self):
-        return [('inventory_status', '=', 'draft'), ('financial_id', '!=', False)]
-    
-    def expected_date_domain(self, days):
-        the_date = fields.Date.today(self) + timedelta(days=days)
-        return [('scheduled_date', '=', the_date), 
-                ('financial_id', '!=', False), 
-                ('inventory_status', 'not in', ['done', 'cancelled']),]
-    
-    def to_be_put_in_stock_domain(self):
-        return [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)]
-    
-    
-    def without_allocated_storage_domain(self):
-        return [
-            ('warehouse_id', '=', False),
-            ('financial_id', '!=', False),
-            ('inventory_status', 'in', ['draft', 'cancelled']),
-            ('move_ids_without_package.is_label_printed', '=', False)
-        ]
-    
-    def labels_to_be_printed_domain(self):
-        return [
-            ('inventory_status', 'not in', ['draft', 'cancelled']),
-            ('financial_id', '!=', False),
-            ('move_ids_without_package', '!=', False),
-            ('move_ids_without_package.is_label_printed', '=', False)
-        ]
-        
-    def open_osd_inventory_domain(self):
-        return [
-            ('inventory_status', '=', 'arrived'),
-            ('financial_id', '!=', False),
-        ]
-        
-    def displaced_items_domain(self):
-        return [
-            ('warehouse_id', '!=', False),
-            ('inventory_status', '=', 'allocated'),
-            ('financial_id', '!=', False)
-        ]
-        
-    def dispatched_items_domain(self):
-        return [
-            ('inventory_status', '=', 'done'),
-            ('financial_id', '!=', False)
-        ]
-    
+                 
     @api.model
     def get_warehouse_dashboard_data(self, filters=None):
         """
@@ -307,37 +434,99 @@ class WarehouseInventory(models.Model):
         if not filters:
             filters = {}
             
-        base_domain = self.get_base_domain(filters) or []
-        _logger.info(f'Base: Domain: {base_domain}')
+        base_domain = []
         
-        waiting_for_info = self.search_count(base_domain + self.waiting_for_info_domain())
-        expected_tomorrow = self.search_count(base_domain + self.expected_date_domain(1))
-        expected_today = self.search_count(base_domain + self.expected_date_domain(0))
-        to_be_put_in_stock = self.search_count(base_domain + self.to_be_put_in_stock_domain())
-        without_allocated_storage = self.search_count(base_domain + self.without_allocated_storage_domain())
+        if filters.get('client') and filters['client'].strip():
+            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
         
-        # labels_to_be_printed_ids = self.search(base_domain + self.labels_to_be_printed_domain())
-        # not_printed_labels = []
-        # pickings_not_printed = []
-        # for lb in labels_to_be_printed_ids:
-        #     moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
-        #     not_printed_labels += moves.ids
-        #     pickings_not_printed += [m.picking_id.id for m in moves] # 54
+        if filters.get('fileType'): # and filters['fileType'] != 'warehouse':
+            # ['warehouse', 'procurement', 'agency', 'cfwd', 'transport', 'travel']
+            base_domain.append(('financial_id.memo_project_type', '=', filters['fileType']))
+            _logger.info('Not implemented...continuing with warehouse')
+        
+        if filters.get('projectNo') and filters['projectNo'].strip():
+            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
             
-        # _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
+        if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
+            month_mapping = {
+                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+            }
+            
+            year = fields.Date.today().year
+            if filters.get('year') and filters['year'] != 'All':
+                try:
+                    year = int(filters['year'])
+                except (ValueError, TypeError):
+                    pass
+            
+            if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
+                month_num = month_mapping[filters['month']]
+                start_date = fields.Date.to_string(date(year, month_num, 1))
+                
+                if month_num == 12:
+                    end_date = fields.Date.to_string(date(year + 1, 1, 1))
+                else:
+                    end_date = fields.Date.to_string(date(year, month_num + 1, 1))
+                    
+                base_domain.append(('create_date', '>=', start_date))
+                base_domain.append(('create_date', '<', end_date))
+            elif filters.get('year') and filters['year'] != 'All':
+                start_date = fields.Date.to_string(date(year, 1, 1))
+                end_date = fields.Date.to_string(date(year + 1, 1, 1))
+                base_domain.append(('create_date', '>=', start_date))
+                base_domain.append(('create_date', '<', end_date))
         
-        not_printed_labels = self.search(base_domain + self.labels_to_be_printed_domain())
+        today = fields.Date.today()
+        tomorrow = today + timedelta(days=1)
+        ninety_days_ago = today - timedelta(days=90)
+        
+        waiting_for_info = self.search_count([('inventory_status', '=', 'draft'), ('financial_id', '!=', False)] + base_domain) #base_domain + [('inventory_status', '=', 'draft')])
+        expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
+        expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
+        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
+        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)])
+        
+        without_allocated_storage = self.search_count(base_domain + [
+            ('warehouse_id', '=', False),
+            ('financial_id', '!=', False),
+            ('inventory_status', 'in', ['draft', 'cancelled'])
+        ])
+        
+        labels_to_be_printed_ids = self.search(base_domain + [
+            ('inventory_status', 'not in', ['draft', 'cancelled']),
+            ('financial_id', '!=', False),
+        ])
+        not_printed_labels = []
+        for lb in labels_to_be_printed_ids:
+            moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
+            not_printed_labels += moves.ids
+        _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
         labels_to_be_printed = len(not_printed_labels)
+        longer_than_90_days = self.search_count(base_domain + [
+            ('actual_date_of_arrival', '!=', False),
+            ('actual_date_of_arrival', '<', ninety_days_ago),
+            ('inventory_status', 'not in', ['done', 'cancelled']),
+            ('financial_id', '!=', False)
+        ])
         
-        longer_than_90_days = self.search_count(base_domain + self.expected_date_domain(90))
+        open_osd_inventory = self.search_count(base_domain + [
+            ('inventory_status', '=', 'arrived'),
+            ('financial_id', '!=', False),
+        ])
         
-        open_osd_inventory = self.search_count(base_domain + self.open_osd_inventory_domain())
+        displaced_items = self.search_count(base_domain + [
+            ('warehouse_id', '!=', False),
+            ('inventory_status', '=', 'allocated'),
+            ('financial_id', '!=', False)
+        ])
         
-        displaced_items = self.search_count(base_domain + self.displaced_items_domain())
+        dispatched_items = self.search_count(base_domain + [
+            ('inventory_status', '=', 'done'),
+            ('financial_id', '!=', False)
+        ])
         
-        dispatched_items = self.search_count(base_domain + self.dispatched_items_domain())
-        
-        result = {
+        result ={
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
             'expectedToday': expected_today,
@@ -346,48 +535,48 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displacedItems': displaced_items,
+            'displaced_items': displaced_items,
             'dispatchedItems': dispatched_items
         }
-        
         _logger.info(f"Dashboard data: {result}")
-        
+
         return result
 
     @api.model
     def get_action(self, action_data=None):
         action_data = action_data or {}
 
-        action_ref = 'warehousing_system.action_warehouse_inventory_receipts'
+        action_ref = 'warehousing_system.action_warehouse_inventory'
         action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
-        
-        _logger.info("get_action python method..........")
 
         if action_data.get('title'):
             action['display_name'] = action_data['title']
-            _logger.info("Title added")
-            
-        domain_map = {
-            'waitingForInfo':        self.waiting_for_info_domain,
-            'expectedTomorrow':      lambda: self.expected_date_domain(1),
-            'expectedToday':         lambda: self.expected_date_domain(0),
-            'toBePutInStock':        self.to_be_put_in_stock_domain,
-            'withoutAllocatedStorage': self.without_allocated_storage_domain,
-            'labelsToBePrinted':     self.labels_to_be_printed_domain,
-            'longerThan90Days':      lambda: self.expected_date_domain(90),
-            'openOSDInventory':      self.open_osd_inventory_domain,
-            'displacedItems':        self.displaced_items_domain,
-            'dispatchedItems':       self.dispatched_items_domain,
-        }
-        card = action_data.get('cardSelected')
-        if card in domain_map:
-            action['domain'] = domain_map[card]()
-            
-        if action_data.get('filterData'):
-            base_domain = self.get_base_domain(action_data['filterData']) or []
-            if base_domain:
-                action['domain'] += base_domain
-                
-        _logger.info(f'Whole Domain = {action['domain']}')
+
+        if 'domain' in action_data and action_data['domain'] is not None:
+            action['domain'] = action_data['domain']
+
+        ctx_flags = action_data.get('context') or {}
+        if ctx_flags:
+            today = fields.Date.today()
+            tomorrow = today + timedelta(days=1)
+            ninety_days_ago = today - timedelta(days=90)
+
+            if ctx_flags.pop('expectedToday', False):
+                action['domain'].append([('scheduled_date', '=', today)])
+                _logger.info('Today\'s Context')
+            elif ctx_flags.pop('expectedTomorrow', False):
+                action['domain'].append([('scheduled_date', '=', tomorrow)])
+                _logger.info('Tomorrow\'s Context')
+            elif ctx_flags.pop('longerThan90Days', False):
+                action['domain'].append([
+                    ('actual_date_of_arrival', '!=', False),
+                    ('actual_date_of_arrival', '<', ninety_days_ago),
+                    ('inventory_status', 'not in', ['done', 'cancelled'])
+                ])
+                _logger.info('longerThan90Days\'s Context')
+
+            ctx = dict(action.get('context') or {})
+            ctx.update(ctx_flags)
+            action['context'] = ctx
 
         return {'action': action}
