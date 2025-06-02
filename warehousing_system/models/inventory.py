@@ -547,99 +547,37 @@ class WarehouseInventory(models.Model):
         if not filters:
             filters = {}
             
-        base_domain = []
+        base_domain = self.get_base_domain(filters) or []
+        _logger.info(f'Base: Domain: {base_domain}')
         
-        if filters.get('client') and filters['client'].strip():
-            base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
+        waiting_for_info = self.search_count(base_domain + self.waiting_for_info_domain())
+        expected_tomorrow = self.search_count(base_domain + self.expected_date_domain(1))
+        expected_today = self.search_count(base_domain + self.expected_date_domain(0))
+        to_be_put_in_stock = self.search_count(base_domain + self.to_be_put_in_stock_domain())
+        without_allocated_storage = self.search_count(base_domain + self.without_allocated_storage_domain())
         
-        if filters.get('fileType'): # and filters['fileType'] != 'warehouse':
-            # ['warehouse', 'procurement', 'agency', 'cfwd', 'transport', 'travel']
-            base_domain.append(('financial_id.memo_project_type', '=', filters['fileType']))
-            _logger.info('Not implemented...continuing with warehouse')
-        
-        if filters.get('projectNo') and filters['projectNo'].strip():
-            base_domain.append(('origin', 'ilike', filters['projectNo'].strip()))
+        # labels_to_be_printed_ids = self.search(base_domain + self.labels_to_be_printed_domain())
+        # not_printed_labels = []
+        # pickings_not_printed = []
+        # for lb in labels_to_be_printed_ids:
+        #     moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
+        #     not_printed_labels += moves.ids
+        #     pickings_not_printed += [m.picking_id.id for m in moves] # 54
             
-        if (filters.get('month') and filters['month'] != 'All') or (filters.get('year') and filters['year'] != 'All'):
-            month_mapping = {
-                'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-            }
-            
-            year = fields.Date.today().year
-            if filters.get('year') and filters['year'] != 'All':
-                try:
-                    year = int(filters['year'])
-                except (ValueError, TypeError):
-                    pass
-            
-            if filters.get('month') and filters['month'] != 'All' and filters['month'] in month_mapping:
-                month_num = month_mapping[filters['month']]
-                start_date = fields.Date.to_string(date(year, month_num, 1))
-                
-                if month_num == 12:
-                    end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                else:
-                    end_date = fields.Date.to_string(date(year, month_num + 1, 1))
-                    
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
-            elif filters.get('year') and filters['year'] != 'All':
-                start_date = fields.Date.to_string(date(year, 1, 1))
-                end_date = fields.Date.to_string(date(year + 1, 1, 1))
-                base_domain.append(('create_date', '>=', start_date))
-                base_domain.append(('create_date', '<', end_date))
+        # _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
         
-        today = fields.Date.today()
-        tomorrow = today + timedelta(days=1)
-        ninety_days_ago = today - timedelta(days=90)
-        
-        waiting_for_info = self.search_count([('inventory_status', '=', 'draft'), ('financial_id', '!=', False)] + base_domain) #base_domain + [('inventory_status', '=', 'draft')])
-        expected_tomorrow = self.search_count(base_domain + [('scheduled_date', '=', tomorrow), ('financial_id', '!=', False)])
-        expected_today = self.search_count(base_domain + [('scheduled_date', '=', today),('financial_id', '!=', False)])
-        expected_today = self.search_count(base_domain + [('expected_arrival_date', '=', today),('financial_id', '!=', False)])
-        to_be_put_in_stock = self.search_count(base_domain + [('inventory_status', '=', 'arrived'),('financial_id', '!=', False)])
-        
-        without_allocated_storage = self.search_count(base_domain + [
-            ('warehouse_id', '=', False),
-            ('financial_id', '!=', False),
-            ('inventory_status', 'in', ['draft', 'cancelled'])
-        ])
-        
-        labels_to_be_printed_ids = self.search(base_domain + [
-            ('inventory_status', 'not in', ['draft', 'cancelled']),
-            ('financial_id', '!=', False),
-        ])
-        not_printed_labels = []
-        for lb in labels_to_be_printed_ids:
-            moves = lb.mapped('move_ids_without_package').filtered(lambda prn: not prn.is_label_printed)
-            not_printed_labels += moves.ids
-        _logger.info(f"INVENTORY ITEMS ==> {not_printed_labels}")
+        not_printed_labels = self.search(base_domain + self.labels_to_be_printed_domain())
         labels_to_be_printed = len(not_printed_labels)
-        longer_than_90_days = self.search_count(base_domain + [
-            ('actual_date_of_arrival', '!=', False),
-            ('actual_date_of_arrival', '<', ninety_days_ago),
-            ('inventory_status', 'not in', ['done', 'cancelled']),
-            ('financial_id', '!=', False)
-        ])
         
-        open_osd_inventory = self.search_count(base_domain + [
-            ('inventory_status', '=', 'arrived'),
-            ('financial_id', '!=', False),
-        ])
+        longer_than_90_days = self.search_count(base_domain + self.expected_date_domain(90))
         
-        displaced_items = self.search_count(base_domain + [
-            ('warehouse_id', '!=', False),
-            ('inventory_status', '=', 'allocated'),
-            ('financial_id', '!=', False)
-        ])
+        open_osd_inventory = self.search_count(base_domain + self.open_osd_inventory_domain())
         
-        dispatched_items = self.search_count(base_domain + [
-            ('inventory_status', '=', 'done'),
-            ('financial_id', '!=', False)
-        ])
+        displaced_items = self.search_count(base_domain + self.displaced_items_domain())
         
-        result ={
+        dispatched_items = self.search_count(base_domain + self.dispatched_items_domain())
+        
+        result = {
             'waitingForInfo': waiting_for_info,
             'expectedTomorrow': expected_tomorrow,
             'expectedToday': expected_today,
@@ -648,49 +586,50 @@ class WarehouseInventory(models.Model):
             'labelsToBePrinted': labels_to_be_printed,
             'longerThan90Days': longer_than_90_days,
             'openOSDInventory': open_osd_inventory,
-            'displaced_items': displaced_items,
+            'displacedItems': displaced_items,
             'dispatchedItems': dispatched_items
         }
+        
         _logger.info(f"Dashboard data: {result}")
-
+        
         return result
 
+    
     @api.model
     def get_action(self, action_data=None):
         action_data = action_data or {}
 
-        action_ref = 'warehousing_system.action_warehouse_inventory'
+        action_ref = 'warehousing_system.action_warehouse_inventory_receipts'
         action = self.env["ir.actions.actions"]._for_xml_id(action_ref)
+        
+        _logger.info("get_action python method..........")
 
         if action_data.get('title'):
             action['display_name'] = action_data['title']
-
-        if 'domain' in action_data and action_data['domain'] is not None:
-            action['domain'] = action_data['domain']
-
-        ctx_flags = action_data.get('context') or {}
-        if ctx_flags:
-            today = fields.Date.today()
-            tomorrow = today + timedelta(days=1)
-            ninety_days_ago = today - timedelta(days=90)
-
-            if ctx_flags.pop('expectedToday', False):
-                action['domain'].append([('scheduled_date', '=', today)])
-                _logger.info('Today\'s Context')
-            elif ctx_flags.pop('expectedTomorrow', False):
-                action['domain'].append([('scheduled_date', '=', tomorrow)])
-                _logger.info('Tomorrow\'s Context')
-            elif ctx_flags.pop('longerThan90Days', False):
-                action['domain'].append([
-                    ('actual_date_of_arrival', '!=', False),
-                    ('actual_date_of_arrival', '<', ninety_days_ago),
-                    ('inventory_status', 'not in', ['done', 'cancelled'])
-                ])
-                _logger.info('longerThan90Days\'s Context')
-
-            ctx = dict(action.get('context') or {})
-            ctx.update(ctx_flags)
-            action['context'] = ctx
+            _logger.info("Title added")
+            
+        domain_map = {
+            'waitingForInfo':        self.waiting_for_info_domain,
+            'expectedTomorrow':      lambda: self.expected_date_domain(1),
+            'expectedToday':         lambda: self.expected_date_domain(0),
+            'toBePutInStock':        self.to_be_put_in_stock_domain,
+            'withoutAllocatedStorage': self.without_allocated_storage_domain,
+            'labelsToBePrinted':     self.labels_to_be_printed_domain,
+            'longerThan90Days':      lambda: self.expected_date_domain(90),
+            'openOSDInventory':      self.open_osd_inventory_domain,
+            'displacedItems':        self.displaced_items_domain,
+            'dispatchedItems':       self.dispatched_items_domain,
+        }
+        card = action_data.get('cardSelected')
+        if card in domain_map:
+            action['domain'] = domain_map[card]()
+            
+        if action_data.get('filterData'):
+            base_domain = self.get_base_domain(action_data['filterData']) or []
+            if base_domain:
+                action['domain'] += base_domain
+                
+        _logger.info(f'Whole Domain = {action['domain']}')
 
         return {'action': action}
     
