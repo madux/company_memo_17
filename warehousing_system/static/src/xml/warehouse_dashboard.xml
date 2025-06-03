@@ -12,6 +12,12 @@
                    placeholder="Search by client name" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'client')" />
           </div>
+          <div class="col">
+            <label>Vehicle</label>
+            <input type="text" class="form-control" t-att-value="state.filters.vehicle" 
+                   placeholder="Search by vehicle" 
+                   t-on-input="(ev) => this.onFilterChange(ev, 'vehicle')" />
+          </div>
           <!-- <div class="col">
             <label>File Type</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'fileType')">
@@ -28,7 +34,7 @@
                    placeholder="Search by project number" 
                    t-on-input="(ev) => this.onFilterChange(ev, 'projectNo')" />
           </div> -->
-          <div class="col">
+          <!-- <div class="col">
             <label>Month</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'month')">
               <option value="All" t-att-selected="state.filters.month === 'All'">All</option>
@@ -45,8 +51,8 @@
               <option value="Nov" t-att-selected="state.filters.month === 'Nov'">Nov</option>
               <option value="Dec" t-att-selected="state.filters.month === 'Dec'">Dec</option>
             </select>
-          </div>
-          <div class="col">
+          </div> -->
+          <!-- <div class="col">
             <label>Year</label>
             <select class="form-control" t-on-change="(ev) => this.onFilterChange(ev, 'year')">
               <option value="All" t-att-selected="state.filters.year === 'All'">All</option>
@@ -54,7 +60,7 @@
               <option value="2024" t-att-selected="state.filters.year === '2024'">2024</option>
               <option value="2023" t-att-selected="state.filters.year === '2023'">2023</option>
             </select>
-          </div>
+          </div> -->
         </div>
       </div>
 

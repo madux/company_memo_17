@@ -13,10 +13,11 @@ class WarehouseDashboard extends Component {
         this.state = useState({
             filters: {
                 client: '',
+                vehicle: '',
                 // fileType: 'warehouse',
                 // projectNo: '',
-                month: 'All',
-                year: 'All'
+                // month: 'All',
+                // year: 'All'
             },
             stats: {
                 waitingForInfo: 0,
@@ -43,10 +44,11 @@ class WarehouseDashboard extends Component {
         try {
             const filterData = {
                 client: this.state.filters.client,
+                vehicle: this.state.filters.vehicle,
                 // fileType: this.state.filters.fileType,
                 // projectNo: this.state.filters.projectNo,
-                month: this.state.filters.month,
-                year: this.state.filters.year
+                // month: this.state.filters.month,
+                // year: this.state.filters.year
             };
             
             const stats = await this.orm.call(
@@ -104,8 +106,9 @@ class WarehouseDashboard extends Component {
 
             const filterData = {
                 client: this.state.filters.client,
-                month: this.state.filters.month,
-                year: this.state.filters.year
+                vehicle: this.state.filters.vehicle,
+                // month: this.state.filters.month,
+                // year: this.state.filters.year
             };
                         
             const actionData = {
