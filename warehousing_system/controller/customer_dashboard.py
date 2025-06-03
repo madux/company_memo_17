@@ -2,48 +2,46 @@ from odoo import http
 from odoo.http import request, Response
 import json
 
-class PublicWarehouseDashboardController(http.Controller):
+class CustomerWarehouseDashboardController(http.Controller):
     
     @http.route([
         '/warehouse', 
         '/warehouse/', 
         '/warehouse/dashboard',
-        '/warehouse/public/dashboard'
+        '/warehouse/customer/dashboard'
     ], type='http', auth='public', website=True)
-    def render_public_dashboard(self, **kw):
-        """Renders the public warehouse dashboard template"""
-        return request.render('warehousing_system.public_warehouse_dashboard_template', {
+    def render_customer_dashboard(self, **kw):
+        """Renders the customer warehouse dashboard template"""
+        return request.render('warehousing_system.customer_warehouse_dashboard_template', {
             'current_page': 'dashboard'
         })
     
     @http.route(
-        '/warehouse/public/dashboard/data',
+        '/warehouse/customer/dashboard/data',
         type='json',
         auth='public',
         csrf=False,
         methods=['POST', 'GET'],
     )
-    def dashboard_data(self, client=None, month='All', year='All', **kw):
+    def dashboard_data(self, client=None, **kw):
         """
         JSON endpoint returning warehouse dashboard summary counts.
         Delegates filtering & counting to model method.
         """
         filters = {
             'client': client or '',
-            'month': month or 'All',
-            'year': year or 'All',
         }
         data = request.env['stock.picking'].sudo().get_customer_warehouse_dashboard_data(filters)
         return data
     
     @http.route(
-        '/warehouse/public/dashboard/action',
+        '/warehouse/customer/dashboard/action',
         type='json',
         auth='public',
         csrf=False,
         methods=['POST', 'GET'],
     )
-    def dashboard_action(self, cardSelected=None, title=None, client=None, month='All', year='All', **kw):
+    def dashboard_action(self, cardSelected=None, title=None, client=None, **kw):
         """
         JSON endpoint returning detailed records for a clicked dashboard card.
         Delegates domain logic to model method.
@@ -53,21 +51,19 @@ class PublicWarehouseDashboardController(http.Controller):
             'title': title or '',
             'filterData': {
                 'client': client or '',
-                'month': month or 'All',
-                'year': year or 'All',
             }
         }
         records = request.env['stock.picking'].sudo().get_customer_dashboard_detail(action_data)
         return records
     
     @http.route(
-        '/warehouse/public/dashboard/list',
+        '/warehouse/customer/dashboard/list',
         type='http',
         methods=['POST', 'GET'],
         auth='public',
         website=True,
     )
-    def customer_inventory_list(self, cardSelected=None, title=None, client=None, month='All', year='All', **kw):
+    def customer_inventory_list(self, cardSelected=None, title=None, vehicle=None, **kw):
         """
         Renders a list view of the records behind the clicked card.
         """
@@ -76,14 +72,12 @@ class PublicWarehouseDashboardController(http.Controller):
             'cardSelected': cardSelected or '',
             'title': title or '',
             'filterData': {
-                'client': client or '',
-                'month': month or 'All',
-                'year': year or 'All',
+                'vehicle': vehicle or '',
             }
         }
         records = request.env['stock.picking'].sudo().get_customer_dashboard_detail(action_data)
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': records,
                 'title': title,
@@ -98,14 +92,12 @@ class PublicWarehouseDashboardController(http.Controller):
         auth='public',
         website=True,
     )
-    def warehouse_inventory(self, client=None, month='All', year='All', **kw):
+    def warehouse_inventory(self, vehicle=None, **kw):
         """
         Display all inventory items (stock.picking records)
         """
         filters = {
-            'client': client or '',
-            'month': month or 'All',
-            'year': year or 'All',
+            'client': vehicle or '',
         }
         
         domain = request.env['stock.picking'].sudo().get_base_domain(filters) or []
@@ -122,7 +114,7 @@ class PublicWarehouseDashboardController(http.Controller):
             })
         
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': formatted_records,
                 'title': 'All Inventory Items',
@@ -137,7 +129,7 @@ class PublicWarehouseDashboardController(http.Controller):
         auth='public',
         website=True,
     )
-    def outbound_dispatch_orders(self, client=None, month='All', year='All', **kw):
+    def outbound_dispatch_orders(self, vehicle=None, **kw):
         """
         Display outbound dispatch orders using the same API as card clicks
         """
@@ -145,16 +137,14 @@ class PublicWarehouseDashboardController(http.Controller):
             'cardSelected': 'dispatchedItems',
             'title': 'Outbound Dispatch Orders',
             'filterData': {
-                'client': client or '',
-                'month': month or 'All',
-                'year': year or 'All',
+                'client': vehicle or '',
             }
         }
         
         records = request.env['stock.picking'].sudo().get_customer_dashboard_detail(action_data)
         
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': records,
                 'title': 'Outbound Dispatch Orders',
@@ -174,7 +164,7 @@ class PublicWarehouseDashboardController(http.Controller):
         Placeholder for inventory creation form
         """
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': [],
                 'title': 'Inventory Creation Form',
@@ -195,7 +185,7 @@ class PublicWarehouseDashboardController(http.Controller):
         Placeholder for put away to section
         """
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': [],
                 'title': 'Put Away to Section',
@@ -215,7 +205,7 @@ class PublicWarehouseDashboardController(http.Controller):
         Placeholder for inventory lists
         """
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': [],
                 'title': 'Inventory Lists',
@@ -235,7 +225,7 @@ class PublicWarehouseDashboardController(http.Controller):
         Placeholder for inbound shipments
         """
         return request.render(
-            'warehousing_system.public_warehouse_detail_template',
+            'warehousing_system.customer_warehouse_detail_template',
             {
                 'records': [],
                 'title': 'Inbound Shipments',

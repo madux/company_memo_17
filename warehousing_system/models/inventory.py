@@ -424,6 +424,10 @@ class WarehouseInventory(models.Model):
         if filters.get('client') and filters['client'].strip():
             base_domain.append(('customer_id.name', 'ilike', filters['client'].strip()))
             _logger.info(f'Customer: {base_domain}')
+            
+        if filters.get('vehicle') and filters['vehicle'].strip():
+            base_domain.append(('truck_company_name.name', 'ilike', filters['vehicle'].strip()))
+            _logger.info(f'Vehicle: {base_domain}')
         
         # if filters.get('fileType'):
         #     # base_domain.append(('inventory_status', '=', filters['fileType']))
@@ -857,7 +861,7 @@ class WarehouseInventory(models.Model):
             result.append({
                 'id': record.id,
                 'name': record.name,
-                'client': record.customer_id.name if record.customer_id else '',
+                'vehicle': record.truck_company_name.name if record.customer_id else '',
                 'status': record.inventory_status,
                 'scheduled_date': record.scheduled_date.strftime('%Y-%m-%d') if record.scheduled_date else '',
             })

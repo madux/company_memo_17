@@ -18,7 +18,7 @@
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css"/>
                     <!-- Font Awesome -->
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
-                    <!-- Custom Warehouse Layout CSS -->
+                    <!-- Warehouse Layout CSS -->
                     <link rel="stylesheet" href="/warehousing_system/static/src/css/warehouse_layout.css"/>
                 </head>
 

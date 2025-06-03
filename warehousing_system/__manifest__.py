@@ -13,6 +13,7 @@
         'data/memo_type_warehouse.xml',
         'views/financial_file_views.xml',
         'views/stock_move_operations_views.xml',
+        'views/trucking_view.xml',
         'views/stock_picking_views.xml',
         'views/inventory_views.xml',
         'views/warehouse_dashboard_menu.xml',

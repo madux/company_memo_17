@@ -7,7 +7,7 @@
     class WarehouseDashboardController {
         constructor() {
             this.state = {
-                filters: { client: '', month: 'All', year: 'All' },
+                filters: { vehicle: '' },
                 isLoading: false,
                 hasError: false,
                 dashboardData: {}
@@ -29,9 +29,9 @@
 
         cacheElementReferences() {
             this.elements = {
-                clientFilter: document.getElementById('client-filter'),
-                monthFilter:  document.getElementById('month-filter'),
-                yearFilter:   document.getElementById('year-filter'),
+                clientFilter: document.getElementById('vehicle-filter'),
+                // monthFilter:  document.getElementById('month-filter'),
+                // yearFilter:   document.getElementById('year-filter'),
                 loadingState: document.getElementById('loading-state'),
                 errorState:   document.getElementById('error-state'),
                 errorMessage: document.getElementById('error-message'),
@@ -54,18 +54,18 @@
         }
 
         setupEventListeners() {
-            if (this.elements.clientFilter)
-                this.elements.clientFilter.addEventListener('input',
-                    this.debounce(ev => this.onFilterChange(ev, 'client'), 500)
+            if (this.elements.vehicleFilter)
+                this.elements.vehicleFilter.addEventListener('input',
+                    this.debounce(ev => this.onFilterChange(ev, 'vehicle'), 500)
                 );
-            if (this.elements.monthFilter)
-                this.elements.monthFilter.addEventListener('change',
-                    ev => this.onFilterChange(ev, 'month')
-                );
-            if (this.elements.yearFilter)
-                this.elements.yearFilter.addEventListener('change',
-                    ev => this.onFilterChange(ev, 'year')
-                );
+            // if (this.elements.monthFilter)
+            //     this.elements.monthFilter.addEventListener('change',
+            //         ev => this.onFilterChange(ev, 'month')
+            //     );
+            // if (this.elements.yearFilter)
+            //     this.elements.yearFilter.addEventListener('change',
+            //         ev => this.onFilterChange(ev, 'year')
+            //     );
 
             document.querySelectorAll('.warehouse-card').forEach(card => {
                 card.addEventListener('click', () => {
@@ -130,7 +130,7 @@
             try {
                 this.updateLoadingState(true);
                 this.updateErrorState(false);
-                const res = await fetch('/warehouse/public/dashboard/data', {
+                const res = await fetch('/warehouse/customer/dashboard/data', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({
@@ -159,36 +159,15 @@
             if (this.elements.modalTable) this.elements.modalTable.style.display='none';
         }
 
-        updateModalContent(data) {
-            if (!data?.length) {
-                if (this.elements.modalEmpty)
-                    this.elements.modalEmpty.style.display='';
-                return;
-            }
-            const tbody = this.elements.detailTableBody;
-            tbody.innerHTML = '';
-            data.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                  <td>${r.name||''}</td>
-                  <td>${r.client||''}</td>
-                  <td>${r.status||''}</td>
-                  <td>${r.scheduled_date||''}</td>`;
-                tbody.appendChild(tr);
-            });
-            this.elements.modalTable.style.display='';
-        }
 
         async onCardClick(cardId, title) {
-            const { client, month, year } = this.state.filters;
+            const { vehicle } = this.state.filters;
             const params = new URLSearchParams({
                 cardSelected: cardId,
                 title: title,
-                client,
-                month,
-                year
+                vehicle: vehicle || '',
             });
-            window.location.href = `/warehouse/public/dashboard/list?${params.toString()}`;
+            window.location.href = `/warehouse/customer/dashboard/list?${params.toString()}`;
         }
 
         debounce(fn, wait) {
