@@ -16,31 +16,31 @@ html, body {
 .dashboard-cards {
   display: flex;
   flex-wrap: wrap;
-  margin: -0.5rem; /* Reduced margin */
-  padding-bottom: 2rem; /* More space at bottom */
+  margin: -0.75rem;
+  padding-bottom: 1.5rem;
 }
 
 .col-card {
-  flex: 0 0 260px; /* Reduced width */
-  max-width: 260px;
-  padding: 0.5rem; /* Reduced padding */
+  flex: 0 0 288px;
+  max-width: 288px;
+  padding: 0.75rem;
   box-sizing: border-box;
 }
 
 .warehouse-card {
-  background-color: #f4c2c2; /* Darker pink/red color */
-  border: 1px solid #e8a5a5; /* Darker border */
-  border-radius: 6px; /* Slightly smaller radius */
-  padding: 0.75rem; /* Reduced padding */
-  height: 90px; /* Much smaller height - flatter */
+  background-color: #f8dada;
+  border: 1px solid #f1c3c3;
+  border-radius: 8px;
+  padding: 1rem;
+  height: 130px;
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-direction: row; /* Changed from column to row */
+  align-items: center; /* Center items vertically */
   justify-content: space-between;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   position: relative;
-  gap: 0.75rem; /* Reduced gap */
+  gap: 1rem; /* Add gap between icon and content sections */
 }
 
 .warehouse-card:hover {
@@ -50,14 +50,14 @@ html, body {
 
 /* Icon container - left side */
 .warehouse-card .card-icon {
-  font-size: 1.8rem; /* Smaller icon size */
-  color: #b91c1c; /* Darker red color */
-  flex-shrink: 0;
+  font-size: 2.5rem; /* Increased icon size */
+  color: #c02c2c;
+  flex-shrink: 0; /* Prevent icon from shrinking */
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px; /* Smaller fixed width */
-  height: 40px; /* Smaller fixed height */
+  width: 60px; /* Fixed width for consistent alignment */
+  height: 60px; /* Fixed height for consistent alignment */
 }
 
 /* Content container - right side */
@@ -66,28 +66,27 @@ html, body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  flex-grow: 1;
+  flex-grow: 1; /* Take remaining space */
   text-align: center;
 }
 
 .warehouse-card .card-count {
-  font-size: 1.8rem; /* Smaller count size */
+  font-size: 2.5rem; /* Increased count size */
   font-weight: bold;
-  color: #b91c1c; /* Darker red color */
+  color: #c02c2c;
   margin: 0;
   line-height: 1;
 }
 
 .warehouse-card .card-title {
-  font-size: 0.75rem; /* Smaller title font */
-  color: #7f1d1d; /* Even darker red for title */
+  font-size: 0.9rem;
+  color: #9a2222;
   text-align: center;
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-  margin-top: 0.25rem; /* Reduced margin */
-  line-height: 1.1;
-  font-weight: 500; /* Slightly bolder */
+  margin-top: 0.5rem;
+  line-height: 1.2;
 }
 
 @media (max-width: 768px) {
@@ -105,17 +104,13 @@ html, body {
   
   /* Adjust for mobile */
   .warehouse-card .card-icon {
-    font-size: 1.5rem;
-    width: 35px;
-    height: 35px;
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
   }
   
   .warehouse-card .card-count {
-    font-size: 1.5rem;
-  }
-  
-  .warehouse-card {
-    height: 80px; /* Even smaller on mobile */
+    font-size: 2rem;
   }
 }
 

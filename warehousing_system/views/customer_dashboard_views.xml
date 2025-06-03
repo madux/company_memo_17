@@ -1,0 +1,41 @@
+<odoo>
+    <data>
+        <template id="public_warehouse_dashboard_template" name="Public Warehouse Dashboard Page">
+          <t t-call="website.layout">
+            <t t-set="head">
+                <t t-call-assets="web.assets_frontend" t-js="false"/>
+                
+                <link rel="stylesheet" type="text/css" href="/warehousing_system/static/src/css/warehouse_dashboard.css"/>
+            </t>
+         
+            <div class="container-fluid mt-4">
+              <h1 class="text-center mb-4">Warehouse Inventory Dashboard</h1>
+              <div id="public-warehouse-dashboard" class="mb-5">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading dashboard...</p>
+                </div>
+              </div>
+            </div>
+         
+            <t t-call-assets="web.assets_frontend" t-css="false"/>
+            
+            <script type="text/javascript" src="/warehousing_system/static/src/js/warehouse_dashboard.js"></script>
+            
+            <script type="text/javascript">
+                // Ensure templates are loaded before JS
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Small delay to ensure all assets are loaded
+                    setTimeout(function() {
+                        if (typeof loadDashboardJS === 'function') {
+                            loadDashboardJS();
+                        }
+                    }, 100);
+                });
+            </script>
+          </t>
+        </template>
+    </data>
+</odoo>

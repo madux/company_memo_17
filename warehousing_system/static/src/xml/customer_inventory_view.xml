@@ -1,0 +1,46 @@
+<odoo>
+  <data>
+    <template id="customer_warehouse_detail_template" name="Warehouse Dashboard Detail List">
+      <t t-call="warehousing_system.warehouse_layout">
+        <div class="container-fluid mt-4">
+          <h2 class="mb-3">
+            <t t-esc="title"/>
+            <!-- <small class="text-muted">
+              (<t t-esc="filters.get('client') or 'All clients'"/>,
+               <t t-esc="filters.get('month', 'All')"/>,
+               <t t-esc="filters.get('year', 'All')"/>)
+            </small> -->
+          </h2>
+          <a class="btn btn-secondary mb-3" t-att-href="'/warehouse/customer/dashboard'">
+            ← Back to Dashboard
+          </a>
+          <div t-if="not records or len(records) == 0">
+            <div class="alert alert-info">No records found.</div>
+          </div>
+          <div t-else="">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Client</th>
+                  <th>Status</th>
+                  <th>Scheduled Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="records" t-as="rec">
+                  <tr>
+                    <td><t t-esc="rec.get('name', '')"/></td>
+                    <td><t t-esc="rec.get('vehicle', '')"/></td>
+                    <td><t t-esc="rec.get('status', '')"/></td>
+                    <td><t t-esc="rec.get('scheduled_date', '')"/></td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </t>
+    </template>
+  </data>
+</odoo>
