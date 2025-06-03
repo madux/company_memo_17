@@ -14,88 +14,89 @@
     <template id="waybill_item_print_report_template">
       <t t-call="web.html_container">
           <t t-foreach="docs" t-as="o">
-              <t t-call="warehousing_system.waybill_item_print_template"/>
+              <t t-call="warehousing_system.waybill_item_print_template">
+                <t t-set="o" t-value="o"/>
+              </t>
           </t>
       </t>
     </template>
     <template id="waybill_item_print_template">
         <t t-call="web.internal_layout">
             <t t-foreach="docs" t-as="o">
-            <div class="page" style="padding-top: 10px; padding-left: 10px; padding-right: 10px;">
-                <style>
-                 table {
-                    border-collapse: collapse;
-                    margin-bottom: 40px;
-                }
+            <div class="page" style="padding-top: 10px; padding-left: 10px; padding-right: 10px; display: flex; flex-direction: column; align-items: center;"> <!-- Added flex centering to .page -->
+            <style>
+             table {
+                border-collapse: collapse;
+                margin: 40px auto 40px auto; /* Changed from margin-bottom: 40px; to center table horizontally */
+            }
 
-                th {
-                    background-color: #333;
-                    color: #fff;
-                }
+            th {
+                background-color: #333;
+                color: #fff;
+            }
 
-                table, th, tr, td, h3 {
-                    font-size: 16px
-                }
-                .title-header {
-                    font-size: 30px 
-                }
+            table, th, tr, td, h3 {
+                font-size: 16px
+            }
+            .title-header {
+                font-size: 30px 
+            }
 
-                table, th, tr, td {
-                    border:1px solid #999;
-                    font-family: Times New Roman;
-                    margin-bottom: 3px;
-                    font-size: 12px
-                } 
-                th, td{
-                    padding: 5px;
-                }
+            table, th, tr, td {
+                border:1px solid #999;
+                font-family: Times New Roman;
+                margin-bottom: 3px;
+                font-size: 12px
+            } 
+            th, td{
+                padding: 5px;
+            }
 
-                td:nth-child(4) {
-                    color: black;
-                }
-                .accounthead {
-                    background-color: #ccc;
-                } 
-                .outstanding {
-                    color: red;
-                }
-                .qr-code {
-                    weight: 100px;
-                    height: 100px;
-                    padding: 2px;
-                    margin-left: 40%;
-                    <!-- margin-right: 100px; -->
-                    align: center;
-                }
+            td:nth-child(4) {
+                color: black;
+            }
+            .accounthead {
+                background-color: #ccc;
+            } 
+            .outstanding {
+                color: red;
+            }
+            .qr-code {
+                width: 100px; /* Changed from weight to width */
+                height: 100px;
+                padding: 2px;
+                margin: 0 auto; /* Center the QR code */
+                display: block; /* Ensure block for centering */
+            }
 
-                .flex-color {
-                    background-color:rgb(17, 3, 3);
-                    text-align: left;
-                    color: #ffffff
-                }
-                .header-flex-color {
-                    background-color:rgb(252, 251, 251);
-                    text-align: left;
-                    color:rgb(16, 4, 4)
-                }
-                .customer-detail {
-                    color:rgb(27, 7, 7);
-                    text-align: center; 
-                    font-size: 30px; 
-                    padding: 1px
-                }
-                .header-detail {
-                    color:rgb(12, 4, 4);
-                    font-size: 10px; 
-                    padding: 1px;
-                }
-                .logo-text {
-                    weight: 50px;
-                    height: 50px;
-                    padding: 4px;
-                    margin-left: 0%;
-                }
-                </style>
+            .flex-color {
+                background-color:rgb(17, 3, 3);
+                text-align: left;
+                color: #ffffff
+            }
+            .header-flex-color {
+                background-color:rgb(252, 251, 251);
+                text-align: left;
+                color:rgb(16, 4, 4)
+            }
+            .customer-detail {
+                color:rgb(27, 7, 7);
+                text-align: center; 
+                font-size: 30px; 
+                padding: 1px
+            }
+            .header-detail {
+                color:rgb(12, 4, 4);
+                font-size: 10px; 
+                padding: 1px;
+            }
+            .logo-text {
+                width: 50px; /* Changed from weight to width */
+                height: 50px;
+                padding: 4px;
+                margin-left: 0%;
+            }
+            </style>
                 <!-- HEADER SECTION-->
                 <!-- <div class="row">
                     <div class="col-2">
@@ -153,113 +154,113 @@
                     </div>
                 </div> -->
                  
-                <div class="d-flex bd-highlight center m">
-                    <div class="p-2 flex-grow-1 bd-highlight">
-                        <div class="row header-flex-color p-1">
-                            <div class="col-4">
-                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.street"/></span>
-                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.city"/></span>
-                                <span class="header-detail"> <t t-esc="o.write_uid.company_id.state_id.name"/>, <t t-esc="o.write_uid.company_id.country_id.name"/></span>
-                            </div>
-                            <div class="col-2 text-center">
-                            </div>
-                            <div class="col-2 offset-4 text-end">
-                                <img class="logo-text" t-attf-src="data:image/*;base64,{{o.write_uid.company_id.logo}}"/> 
-                            </div>
+                <div class="d-flex bd-highlight justify-content-center"> <!-- Added justify-content-center to center header content -->
+                <div class="p-2 flex-grow-1 bd-highlight" style="max-width: 800px; width: 100%;"> <!-- Added max-width and full width so content doesn’t stretch too far -->
+                    <div class="row header-flex-color p-1">
+                        <div class="col-4">
+                            <span class="header-detail"> <t t-esc="o.write_uid.company_id.street"/></span><br/>
+                            <span class="header-detail"> <t t-esc="o.write_uid.company_id.city"/></span><br/>
+                            <span class="header-detail"> <t t-esc="o.write_uid.company_id.state_id.name"/>, <t t-esc="o.write_uid.company_id.country_id.name"/></span>
                         </div>
-                        <hr/>
-                        <div class="customer-detail">
-                            <span class="text-center"> 
-                                <t t-esc="o.picking_id.partner_id.name"/>
-                            </span>
+                        <div class="col-2 text-center">
                         </div>
-                        <div class="customer-detail">
-                            <span class="text-center">
-                                <t t-esc="o.picking_id.financial_id.code"/>
-                            </span>
+                        <div class="col-2 offset-4 text-end">
+                            <img class="logo-text" t-attf-src="data:image/*;base64,{{o.write_uid.company_id.logo}}"/> 
                         </div>
-                        <img class="logo text-center qr-code" t-attf-src="data:image/*;base64,{{o.qr_code}}"/> 
-                        <h3 class="text-bold text-center flex-color p-2">ITEM DETAILS</h3>
-                        <div class="table-responsive mt-0">
-                            <table style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th width="40%">
-                                        </th>
-                                        <th width="60%">
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Item Description </h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.product_id.name"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Critical Level</h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.critical_equipment"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Unit: </h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.product_uom.name"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold"> Related Inbound Shipment </h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.related_inbound_shipment.name or ''"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Arrival time</h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.actual_date_of_arrival"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Supplier Po Number</h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.supplier_po_number"/></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Customer Po Number</h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.receiving_waybill_number" /></h3>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <h3 class="text-bold">Our file Number</h3>
-                                        </td>
-                                        <td>
-                                            <h3 class="text-bold"><t t-esc="o.picking_id.financial_id.code" /></h3>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div> 
-                        <p><h6 class="text-center p-0">Allocated Storage Area</h6></p>
-                        <p><h1 class="text-bold text-center p-0"><t t-esc="o.picking_id.location_dest_id.name"/></h1></p>
+                    </div>
+                    <hr/>
+                    <div class="customer-detail">
+                        <span class="text-center"> 
+                            <t t-esc="o.picking_id.partner_id.name"/>
+                        </span>
+                    </div>
+                    <div class="customer-detail">
+                        <span class="text-center">
+                            <t t-esc="o.picking_id.financial_id.code"/>
+                        </span>
+                    </div>
+                    <img class="logo qr-code" t-attf-src="data:image/*;base64,{{o.qr_code}}"/> 
+                    <h3 class="text-bold text-center flex-color p-2">ITEM DETAILS</h3>
+                    <div class="table-responsive mt-0">
+                        <table style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th width="40%">
+                                    </th>
+                                    <th width="60%">
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Item Description </h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.product_id.name"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Critical Level</h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.item_classification_critical and 'Yes' or 'No'"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Unit: </h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.product_uom.name"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold"> Related Inbound Shipment </h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.picking_id.related_inbound_shipment.name or ''"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Arrival time</h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.picking_id.actual_date_of_arrival"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Supplier Po Number</h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.picking_id.supplier_po_number"/></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Customer Po Number</h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.picking_id.receiving_waybill_number" /></h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <h3 class="text-bold">Our file Number</h3>
+                                    </td>
+                                    <td>
+                                        <h3 class="text-bold"><t t-esc="o.picking_id.financial_id.code" /></h3>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div> 
+                    <p><h6 class="text-center p-0">Allocated Storage Area</h6></p>
+                    <p><h1 class="text-bold text-center p-0"><t t-esc="o.picking_id.location_dest_id.name"/></h1></p>
 
                         <!-- <div class='row'>
                             <h6 class="text flex-color p-2">Allocated Storage Area</h6>
